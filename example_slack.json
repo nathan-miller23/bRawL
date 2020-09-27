@@ -1,0 +1,8 @@
+{
+    "webhook_url": "TODO",
+    "icon": ":imp:",
+    "bot_name": "sacred-bot",
+    "completed_text": ":white_check_mark: `{config[experiment_name]}` completed after _{elapsed_time}_ with final average sparse rewards across all seeds=`{result[average_sparse_reward]}`",
+    "interrupted_text": ":warning: *{config[experiment_name]}* interrupted after _{elapsed_time}_",
+    "failed_text": ":x: :cry: `{config[experiment_name]}` failed failed after _{elapsed_time}_ saying `{fail_trace}`. \n\nConfig was `{config}`"
+}

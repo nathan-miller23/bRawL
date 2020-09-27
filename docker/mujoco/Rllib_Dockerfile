@@ -1,0 +1,15 @@
+FROM nathanmiller23/learning:mujoco
+
+RUN mkdir /install-tmp
+WORKDIR /install-tmp
+
+COPY ./requirements.txt ./
+RUN pip install -r requirements.txt
+RUN pip install notebook
+RUN pip install matplotlib
+
+ENV PATH ${PATH}:/env/bin
+
+WORKDIR /home
+
+CMD ["jupyter", "notebook", "--no-browser", "--ip=0.0.0.0", "--NotebookApp.token=''", "--NotebookApp.password=''", "--allow-root"]
