@@ -1,0 +1,14 @@
+FROM nathanmiller23/brawl:latest
+
+ENV HOME=/home
+
+WORKDIR /libmelee
+
+RUN touch /dolphin/dolphin_src/build/Binaries/portable.txt
+RUN mkdir /dolphin/dolphin_src/build/Binaries/User/ && mkdir /dolphin/dolphin_src/build/Binaries/User/GameSettings
+
+COPY GALE01.ini /dolphin/dolphin_src/build/Binaries/User/GameSettings/
+
+COPY libmelee libmelee_src
+
+RUN pip3 install -e libmelee_src
