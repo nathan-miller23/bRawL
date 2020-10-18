@@ -1,0 +1,3 @@
+[submodule "libmelee"]
+	path = libmelee
+	url = git@github.com:nathan-miller23/libmelee.git
