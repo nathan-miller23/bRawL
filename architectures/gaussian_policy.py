@@ -17,7 +17,7 @@ class DiscreteGaussianPolicy(nn.Module):
         action_probs = torch.softmax(self.forward(states), dim=1)
         action_dists = distributions.Categorical(action_probs)
         rand_actions = action_dists.sample()
-        _, actions = torch.max(action_probs, dim=1)
+        actions = torch.argmax(action_probs, dim=1)
         return rand_actions, action_probs, actions
 
 
