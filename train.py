@@ -5,6 +5,7 @@ import gym
 from IPython import display
 import matplotlib
 import matplotlib.pyplot as plt
+from environments import BreakoutRllib
 
 # Create an experiment object
 from sacred import Experiment
@@ -38,19 +39,26 @@ def main(params):
         print("Parameter {} is set to {}".format(key, value))
         
     if not params["use_gym_env"]:
+        print(1)
         from ray.tune.registry import register_env
-        from environments import *
-        register_env(params["env_name"], lambda _: eval(params["env_name"]+"()")
+        print(2)
+        env_class = params["env_name"]+"()"
+        obj = eval(env_class)
+        register_env(params["env_name"], lambda _: obj)
         
     if params["model"] == "DQN":
+        print(3)
         from ray.rllib.agents import dqn
         ray.init()
+        print(4)
         
         config = dqn.DEFAULT_CONFIG.copy()
         config["framework"] = params["framework"]
         env = str(params["env_name"])
+        print(5)
         
         trainer = dqn.DQNTrainer(config=config, env=env)
+        print(6)
         for i in range(100):
             print(trainer.train()['episode_reward_mean'])
 
