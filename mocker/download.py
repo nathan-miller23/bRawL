@@ -44,7 +44,7 @@ def main():
     shell_cmd("rm", "out/slippi.zip")
     shell_cmd("mv", "Slippi Dolphin.app", "out/dolphin-emu.app")
     shell_cmd("rm", "-rvf", "__MACOSX")
-    shell_cmd("git", "clone", "--branch", "dev", "git@github.com:18praveenb/libmelee.git", "out/libmelee")
+    shell_cmd("git", "clone", "--branch", "dev", "git@github.com:nathan-miller23/libmelee.git", "out/libmelee")
     shell_cmd("touch", "out/dolphin-emu.app/Contents/MacOS/portable.txt")
     shell_cmd("wget", GALE_URL, "-O", "out/dolphin-emu.app/Contents/Resources/Sys/GameSettings/GALE01r2.ini")
     shell_cmd("mkdir", "-p", "out/dolphin-emu.app/Contents/Resources/User/Pipes")
