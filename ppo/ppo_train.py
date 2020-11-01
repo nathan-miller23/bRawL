@@ -80,7 +80,7 @@ def main(params):
     # else:
     # trainer.restore(checkpoint_path)
     trainer.restore("/root/ray_results/PPO_my_env_2020-11-01_19-04-39dkp16k9z/checkpoint_10/checkpoint-10")
-    env = _env_creator(params['rllib_params']['env_config'])
+    env = trainer.workers.local_worker().env
     observation = env.reset()
     for i in range(100):
         plt.imshow(env.render(mode='rgb_array'))
