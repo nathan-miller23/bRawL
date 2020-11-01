@@ -12,7 +12,7 @@ from ray.tune.registry import register_env
 from ray.rllib.agents.ppo.ppo import PPOTrainer
 
 # Local Imports
-from environments import BreakoutRllib
+from environments import *
 from models import *
 
 # Create an experiment object
@@ -33,10 +33,11 @@ if os.path.exists('slack.json') and not LOCAL_TESTING:
     ex.observers.append(slack_obs)
     # Necessary for capturing stdout in multiprocessing setting
     SETTINGS.CAPTURE_MODE = 'sys'
-
     
-def _env_creator(env_config):
-    return gym.make(env_config['name'])
+def get_env_creator(name):
+    def _create_env(env_config):
+        return BreakoutRllib()
+    return _create_env
 
 def get_trainer_from_params(params):
     return PPOTrainer(env=params['env_name'], config=params['rllib_params'])
@@ -75,9 +76,6 @@ def config():
         "train": train,
         
         'rllib_params': {
-            "env_config": {
-                "name": 'Breakout-v0',
-            },
             "model": {
                 "custom_model": "my_model",
             },
@@ -89,17 +87,12 @@ def config():
     }
     
 @ex.main
-def main(params):
+def main(params):    
     for (key, value) in params.items():
         print("Parameter {} is set to {}".format(key, value))
         
     if not params["use_gym_env"]:
-        print(1)
-        
-        print(2)
-        global env_class
-        env_class = params["env_name"]+"()"
-        register_env(params["env_name"], lambda _: eval(env_class))
+        register_env(params["env_name"], get_env_creator(params["env_name"]))
         
     if params["model"] == "DQN":
         print(3)
