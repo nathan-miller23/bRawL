@@ -42,9 +42,9 @@ def main(params):
         print(1)
         from ray.tune.registry import register_env
         print(2)
+        global env_class
         env_class = params["env_name"]+"()"
-        obj = eval(env_class)
-        register_env(params["env_name"], lambda _: obj)
+        register_env(params["env_name"], lambda _: eval(env_class))
         
     if params["model"] == "DQN":
         print(3)
