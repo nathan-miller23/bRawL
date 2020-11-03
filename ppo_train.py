@@ -3,7 +3,7 @@ from ray.rllib.models import ModelCatalog
 from ray.rllib.models.torch.torch_modelv2 import TorchModelV2
 from ray.tune.registry import register_env
 from ray.rllib.agents.ppo.ppo import PPOTrainer
-from ppo_model import *
+from models import *
 import gym
 from IPython import display
 import matplotlib
@@ -32,7 +32,7 @@ def _env_creator(env_config):
     return gym.make("BreakoutNoFrameskip-v4")
 
 def get_trainer_from_params(params):
-    return PPOTrainer(env=params['env'], config=params['rllib_params'])
+    return PPOTrainer(env="BreakoutNoFrameskip-v4", config=params['rllib_params'])
 
 #Smash env creator function
 
@@ -82,7 +82,7 @@ def my_config():
     shared_policy = True
 
     # Number of training iterations to run
-    num_training_iters = 400 if not LOCAL_TESTING else 2
+    num_training_iters = 1 if not LOCAL_TESTING else 2
 
     # Stepsize of SGD.
     lr = 5e-3
@@ -121,62 +121,6 @@ def my_config():
     # execute per train batch).
     num_sgd_iter = 8 if not LOCAL_TESTING else 1
 
-    # How many trainind iterations (calls to trainer.train()) to run before saving model checkpoint
-    save_freq = 250
-
-    # How many training iterations to run between each evaluation
-    evaluation_interval = 50 if not LOCAL_TESTING else 1
-
-    # How many timesteps should be in an evaluation episode
-    evaluation_ep_length = 400
-
-    # Number of games to simulation each evaluation
-    evaluation_num_games = 2
-
-    # Whether to display rollouts in evaluation
-    evaluation_display = True
-
-    # Where to store replay txt files
-    evaluation_replay_store_dir = None
-
-    # Where to log the ray dashboard stats
-    temp_dir = os.path.join(os.path.abspath(os.sep), "tmp", "ray_tmp") if not LOCAL_TESTING else None
-
-    # Where to store model checkpoints and training stats
-    results_dir = os.path.join(os.path.abspath('.'), 'results_client_temp')
-
-    # Whether tensorflow should execute eagerly or not
-    eager = False
-
-
-    ### BC Params ###
-    # path to pickled policy model for behavior cloning
-    bc_model_dir = os.path.join(BC_SAVE_DIR, "default")
-
-    # Whether bc agents should return action logit argmax or sample
-    bc_stochastic = True
-
-
-    # Name of directory to store training results in (stored in ~/ray_results/<experiment_name>)
-    experiment_name = "{0}_{1}".format("PPO_fp_", params_str)
-
-
-    # Whether dense reward should come from potential function or not
-    use_phi = True
-
-    # Max episode length
-    horizon = 400
-
-    # The number of MDP in the env.mdp_lst
-    num_mdp = 1
-    # num_mdp = np.inf  # for infinite mdp
-
-    # Constant by which shaped rewards are multiplied by when calculating total reward
-    reward_shaping_factor = 1.0
-
-    # Linearly anneal the reward shaping factor such that it reaches zero after this number of timesteps
-    reward_shaping_horizon = 1e6
-
     # To be passed into rl-lib model/custom_options config
     model_params = {
         "use_lstm" : use_lstm,
@@ -184,12 +128,14 @@ def my_config():
         "SIZE_HIDDEN_LAYERS" : SIZE_HIDDEN_LAYERS,
         "NUM_FILTERS" : NUM_FILTERS,
         "NUM_CONV_LAYERS" : NUM_CONV_LAYERS,
-        "CELL_SIZE" : CELL_SIZE
+        "CELL_SIZE" : CELL_SIZE,
+        "HIDDEN_OUTPUT_SIZE": 4900
     }
     params= {
-        "num_training_iters": 500,
-        "rllib_params":
-        {"preprocessor_pref":"deepmind",
+        "num_training_iters": num_training_iters,
+        "rllib_params": {
+        "framework": "torch",
+        "preprocessor_pref":"deepmind",
         "num_workers" : num_workers,
         "train_batch_size" : train_batch_size,
         "sgd_minibatch_size" : sgd_minibatch_size,
@@ -206,24 +152,23 @@ def my_config():
         "clip_param" : clip_param,
         "num_gpus" : num_gpus,
         "seed" : seed,
-        "evaluation_interval" : evaluation_interval,
         "entropy_coeff_schedule" : [(0, entropy_coeff_start), (entropy_coeff_horizon, entropy_coeff_end)],
-        "eager" : eager,
         "model" : {"custom_options": model_params, "custom_model": "my_model"}}
     }
-}
 
 @ex.automain
 def main(params):
     ray.init()
-    ModelCatalog.register_custom_model("RllibPPOModel", TorchCustomModel)
+    print(LOCAL_TESTING)
+    ModelCatalog.register_custom_model("my_model", RllibPPOModel)
     register_env("my_env", _env_creator)
 
     trainer = get_trainer_from_params(params)
     
     for i in range(params['num_training_iters']):
-        print("starting training iteration {}".format(i))
-        trainer.train()
-        if (i % params['num_training_iters'] == 50) or (i == params['num_training_iters'] - 1):
+        result = trainer.train()
+        print("Iteration {}".format(i))
+        print("Reward: {}", result['episode_reward_mean'])
+        if (i % params['num_training_iters'] == 100) or (i == params['num_training_iters'] - 1):
             checkpoint_path = trainer.save()
             print(checkpoint_path)
