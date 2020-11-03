@@ -54,7 +54,7 @@ def my_config():
 
     ### Training Params ###
 
-    num_workers = 20 if not LOCAL_TESTING else 2
+    num_workers = 20
 
     # list of all random seeds to use for experiments, used to reproduce results
     seeds = [0]
@@ -63,26 +63,26 @@ def my_config():
     seed = None
 
     # Number of gpus the central driver should use
-    num_gpus = 0 if LOCAL_TESTING else 2
+    num_gpus = 2
 
     # How many environment timesteps will be simulated (across all environments)
     # for one set of gradient updates. Is divided equally across environments
     # train_batch_size = 40000 if not LOCAL_TESTING else 800
-    train_batch_size = 100000 if not LOCAL_TESTING else 800
+    train_batch_size = 4000
 
     # size of minibatches we divide up each batch into before
     # performing gradient steps
     # sgd_minibatch_size = 10000 if not LOCAL_TESTING else 800
-    sgd_minibatch_size = 25000 if not LOCAL_TESTING else 800
+    sgd_minibatch_size = 128
 
     # Rollout length
-    rollout_fragment_length = 400
+    rollout_fragment_length = 200
     
     # Whether all PPO agents should share the same policy network
     shared_policy = True
 
     # Number of training iterations to run
-    num_training_iters = 1 if not LOCAL_TESTING else 2
+    num_training_iters = 1 
 
     # Stepsize of SGD.
     lr = 5e-3
@@ -119,7 +119,7 @@ def my_config():
 
     # Number of SGD iterations in each outer loop (i.e., number of epochs to
     # execute per train batch).
-    num_sgd_iter = 8 if not LOCAL_TESTING else 1
+    num_sgd_iter = 8 
 
     # To be passed into rl-lib model/custom_options config
     model_params = {
