@@ -54,7 +54,7 @@ def my_config():
 
     ### Training Params ###
 
-    num_workers = 20
+    num_workers = 2
 
     # list of all random seeds to use for experiments, used to reproduce results
     seeds = [0]
@@ -82,7 +82,7 @@ def my_config():
     shared_policy = True
 
     # Number of training iterations to run
-    num_training_iters = 1 
+    num_training_iters = 2000 
 
     # Stepsize of SGD.
     lr = 5e-3
@@ -134,6 +134,7 @@ def my_config():
     params= {
         "num_training_iters": num_training_iters,
         "rllib_params": {
+        "monitor": True,
         "framework": "torch",
         "preprocessor_pref":"deepmind",
         "num_workers" : num_workers,
@@ -153,7 +154,12 @@ def my_config():
         "num_gpus" : num_gpus,
         "seed" : seed,
         "entropy_coeff_schedule" : [(0, entropy_coeff_start), (entropy_coeff_horizon, entropy_coeff_end)],
-        "model" : {"custom_options": model_params, "custom_model": "my_model"}}
+        "model" : {"custom_options": model_params, "custom_model": "my_model"}},
+        "explore": True,
+        "exploration_config":{
+            "type":"EpsilonGreedy",
+            "epsilon_timesteps": 100000
+        }
     }
 
 @ex.automain
@@ -169,6 +175,6 @@ def main(params):
         result = trainer.train()
         print("Iteration {}".format(i))
         print("Reward: {}", result['episode_reward_mean'])
-        if (i % params['num_training_iters'] == 100) or (i == params['num_training_iters'] - 1):
+        if (i % 100 == 0) or (i == params['num_training_iters'] - 1):
             checkpoint_path = trainer.save()
             print(checkpoint_path)
