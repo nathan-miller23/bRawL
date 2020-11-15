@@ -1,7 +1,7 @@
 import gym
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 
-class BreakoutRllib(MultiAgentEnv):
+class BreakoutRllib(gym.Env):
     
     def __init__(self, *args, **kwargs):
         self._env = gym.make('Breakout-v0')

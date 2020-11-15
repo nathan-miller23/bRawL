@@ -1,2 +1,1 @@
-from .breakout import BreakoutRllib
-breakoutrl = BreakoutRllib
+from .breakout import *
