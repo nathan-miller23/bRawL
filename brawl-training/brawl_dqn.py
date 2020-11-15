@@ -30,6 +30,7 @@ def env_creator(env_config):
 
 register_env("SSBM", env_creator)
 trainer = dqn.DQNTrainer(env="SSBM", config = {
+    "framework": "torch",
     "env_config": {'dolphin_exe_path': '/Users/jimwang/Desktop/FM-v5.9-Slippi-r18-Mac/Dolphin.app/Contents/MacOS','ssbm_iso_path': '/Users/jimwang/Desktop/launchpad/SSMB.iso'}
 })
 
