@@ -9,7 +9,7 @@ RUN apt install -y git
 
 WORKDIR /dolphin
 
-RUN git clone --depth 1 https://github.com/altf4/Ishiiruka.git  --branch gamma --single-branch dolphin_src
+RUN git clone --depth 1 https://github.com/altf4/Ishiiruka.git --branch slippi --single-branch dolphin_src
 
 RUN mkdir /dolphin/dolphin_src/build
 WORKDIR /dolphin/dolphin_src/build
