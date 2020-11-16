@@ -3,15 +3,18 @@ from ray.rllib.models import ModelCatalog
 from ray.rllib.models.torch.torch_modelv2 import TorchModelV2
 from ray.tune.registry import register_env
 from ray.rllib.agents.ppo.ppo import PPOTrainer
-from models import *
+
 import gym
 from IPython import display
+from models import *
+import melee
+from melee import SSBMEnv
 import matplotlib
 import matplotlib.pyplot as plt
 
 import os
 from sacred import Experiment
-ex = Experiment("Rllib Example")
+ex = Experiment("PPO Libmelee Training")
 
 # Necessary work-around to make sacred pickling compatible with rllib
 from sacred import SETTINGS
@@ -29,10 +32,12 @@ if os.path.exists('slack.json') and not LOCAL_TESTING:
     SETTINGS.CAPTURE_MODE = 'sys'
 
 def _env_creator(env_config):
-    return gym.make("BreakoutNoFrameskip-v4")
+    return SSBMEnv(env_config["dolphin_exe_path"], env_config["ssbm_iso_path"], char1=env_config["char1"], char2=env_config["char2"], 
+    stage=env_config["stage"], symmetric=env_config["symmetric"], cpu_level=env_config["cpu_level"], log=env_config["log"],
+    reward_func=env_config["reward_func"], render=env_config["render"])
 
 def get_trainer_from_params(params):
-    return PPOTrainer(env="BreakoutNoFrameskip-v4", config=params['rllib_params'])
+    return PPOTrainer(env="melee", config=params['rllib_params'])
 
 #Smash env creator function
 
@@ -54,7 +59,7 @@ def my_config():
 
     ### Training Params ###
 
-    num_workers = 2
+    num_workers = 1
 
     # list of all random seeds to use for experiments, used to reproduce results
     seeds = [0]
@@ -131,9 +136,36 @@ def my_config():
         "CELL_SIZE" : CELL_SIZE,
         "HIDDEN_OUTPUT_SIZE": 4900
     }
+
+    #Custom environment parameters
+    dolphin_exe_path = "/Users/chevin/Desktop/Launchpad/bRawL/mocker/dolphin-emu.app/Contents/MacOS"
+    ssbm_iso_path = "/Users/chevin/Desktop/Launchpad/SSBISO/SSMB.iso"
+    char1 = melee.Character.FOX
+    char2 = melee.Character.FALCO
+    stage = melee.Stage.FINAL_DESTINATION
+    symmetric = False
+    cpu_level = 1
+    log = False
+    reward_func = None
+    render = False
+
+    environment_params = {
+        "dolphin_exe_path": dolphin_exe_path,
+        "ssbm_iso_path": "",
+        "char1": char1,
+        "char2": char2,
+        "stage": stage,
+        "symmetric": symmetric,
+        "cpu_level": cpu_level,
+        "log": log,
+        "reward_func": reward_func,
+        "render": render
+    }
+
     params= {
         "num_training_iters": num_training_iters,
         "rllib_params": {
+        "env_config": environment_params,
         "monitor": True,
         "framework": "torch",
         "preprocessor_pref":"deepmind",
@@ -154,7 +186,7 @@ def my_config():
         "num_gpus" : num_gpus,
         "seed" : seed,
         "entropy_coeff_schedule" : [(0, entropy_coeff_start), (entropy_coeff_horizon, entropy_coeff_end)],
-        "model" : {"custom_options": model_params, "custom_model": "my_model"}},
+        "model" : {"custom_model_config": model_params, "custom_model": "my_model"}},
         "explore": True,
         "exploration_config":{
             "type":"EpsilonGreedy",
@@ -167,10 +199,9 @@ def main(params):
     ray.init()
     print(LOCAL_TESTING)
     ModelCatalog.register_custom_model("my_model", RllibPPOModel)
-    register_env("my_env", _env_creator)
-
+    register_env("melee", _env_creator)
     trainer = get_trainer_from_params(params)
-    
+    print("Trainer built")
     for i in range(params['num_training_iters']):
         result = trainer.train()
         print("Iteration {}".format(i))
