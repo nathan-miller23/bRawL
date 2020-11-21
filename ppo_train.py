@@ -183,8 +183,7 @@ def my_config():
         "num_gpus" : num_gpus,
         "seed" : seed,
         "entropy_coeff_schedule" : [(0, entropy_coeff_start), (entropy_coeff_horizon, entropy_coeff_end)],
-        },
-        #"model" : {"custom_model_config": model_params, "custom_model": "my_model"}},
+        "model" : {"custom_model_config": model_params, "custom_model": "my_model"}},
         "explore": True,
         "exploration_config":{
             "type":"EpsilonGreedy",
@@ -196,7 +195,7 @@ def my_config():
 def main(params):
     ray.init()
     print(LOCAL_TESTING)
-    #ModelCatalog.register_custom_model("my_model", RllibPPOModel)
+    ModelCatalog.register_custom_model("my_model", RllibPPOModel)
     register_env("melee", _env_creator)
     trainer = get_trainer_from_params(params)
     print("Trainer built")
