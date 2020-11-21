@@ -5,7 +5,6 @@ from ray.tune.registry import register_env
 from ray.rllib.agents.ppo.ppo import PPOTrainer
 
 import gym
-from IPython import display
 from models import *
 import melee
 from melee import SSBMEnv
