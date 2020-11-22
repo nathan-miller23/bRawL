@@ -348,3 +348,17 @@ MigrationBackup/
 
 # Ionide (cross platform F# VS Code tools) working folder
 .ionide/
+
+# Jupyter 
+**/.ipynb_checkpoints/
+
+# Super secret secrets
+**/mjkey.txt
+
+env
+*.iso
+*.dylib
+*.mo
+*.png
+mocker/dolphin-emu.app
+.vscode
