@@ -1,3 +1,4 @@
+import numpy as np
 from ray.rllib.models.torch.torch_modelv2 import TorchModelV2
 from ray.rllib.utils.annotations import override
 from ray.rllib.utils.framework import try_import_torch
@@ -24,18 +25,21 @@ class RllibPPOModel(TorchModelV2, nn.Module):
         hidden_output_size = custom_params["HIDDEN_OUTPUT_SIZE"]
 
         modules = []
-        if num_convs > 0:
-            modules.append(torch.nn.Conv2d(obs_space.shape[-1], num_filters, kernel_size=[5, 5], padding=3))
-            modules.append(torch.nn.LeakyReLU())
-            modules.append(torch.nn.MaxPool2d(2, stride=2, padding=1))
-        for i in range(0, num_convs-1):
-            modules.append(torch.nn.Conv2d(num_filters, num_filters, kernel_size=[3, 3], padding=2))
-            modules.append(torch.nn.LeakyReLU())
-            modules.append(torch.nn.MaxPool2d(2, stride=2, padding=1))
+       # if num_convs > 0:
+       #     modules.append(torch.nn.Conv2d(obs_space.shape[-1], num_filters, kernel_size=[5, 5], padding=3))
+       #     modules.append(torch.nn.LeakyReLU())
+       #     modules.append(torch.nn.MaxPool2d(2, stride=2, padding=1))
+       # for i in range(0, num_convs-1):
+       #     modules.append(torch.nn.Conv2d(num_filters, num_filters, kernel_size=[3, 3], padding=2))
+       #     modules.append(torch.nn.LeakyReLU())
+       #     modules.append(torch.nn.MaxPool2d(2, stride=2, padding=1))
         modules.append(nn.Flatten())
         
-        modules.append(nn.Linear(hidden_output_size, size_hidden_layers))
+        #modules.append(nn.InstanceNorm1d(39))
+        
+        modules.append(nn.Linear(39, size_hidden_layers))
         modules.append(torch.nn.LeakyReLU())
+        
         for i in range(num_hidden_layers - 1):
             modules.append(torch.nn.Linear(size_hidden_layers, size_hidden_layers))
             modules.append(torch.nn.LeakyReLU())
@@ -45,7 +49,8 @@ class RllibPPOModel(TorchModelV2, nn.Module):
         self.value_out = torch.nn.Linear(size_hidden_layers, 1)
 
     def forward(self, input_dict, state=None, seq_lens=None):
-        obs = input_dict["obs"].float().permute(0,3,1,2)
+        obs = input_dict["obs"].float()#.permute(0,3,1,2)
+        obs = obs / np.linalg.norm(obs)
         hidden = self.layers(obs)
         model_out = self.model_out(hidden).view(-1, self._num_outputs)
         self._value_out = self.value_out(hidden)

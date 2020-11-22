@@ -5,12 +5,9 @@ from ray.tune.registry import register_env
 from ray.rllib.agents.ppo.ppo import PPOTrainer
 
 import gym
-from IPython import display
 from models import *
 import melee
 from melee import SSBMEnv
-import matplotlib
-import matplotlib.pyplot as plt
 
 import os
 from sacred import Experiment
@@ -68,7 +65,7 @@ def my_config():
     seed = None
 
     # Number of gpus the central driver should use
-    num_gpus = 2
+    num_gpus = 0
 
     # How many environment timesteps will be simulated (across all environments)
     # for one set of gradient updates. Is divided equally across environments
@@ -138,8 +135,8 @@ def my_config():
     }
 
     #Custom environment parameters
-    dolphin_exe_path = "/Users/chevin/Desktop/Launchpad/bRawL/mocker/dolphin-emu.app/Contents/MacOS"
-    ssbm_iso_path = "/Users/chevin/Desktop/Launchpad/SSBISO/SSMB.iso"
+    dolphin_exe_path = "/Users/volk/Desktop/bRawL/dolphin-emu.app/Contents/MacOS"
+    ssbm_iso_path = "/Users/volk/Downloads/SSMB.iso"
     char1 = melee.Character.FOX
     char2 = melee.Character.FALCO
     stage = melee.Stage.FINAL_DESTINATION
@@ -151,7 +148,7 @@ def my_config():
 
     environment_params = {
         "dolphin_exe_path": dolphin_exe_path,
-        "ssbm_iso_path": "",
+        "ssbm_iso_path": ssbm_iso_path,
         "char1": char1,
         "char2": char2,
         "stage": stage,
@@ -165,9 +162,9 @@ def my_config():
     params= {
         "num_training_iters": num_training_iters,
         "rllib_params": {
-        "env_config": environment_params,
-        "monitor": True,
-        "framework": "torch",
+            "env_config": environment_params,
+            "monitor": True,
+            "framework": "torch",
         "preprocessor_pref":"deepmind",
         "num_workers" : num_workers,
         "train_batch_size" : train_batch_size,
