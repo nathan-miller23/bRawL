@@ -203,6 +203,6 @@ def main(params):
         result = trainer.train()
         print("Iteration {}".format(i))
         print("Reward: {}", result['episode_reward_mean'])
-        if (i % 100 == 0) or (i == params['num_training_iters'] - 1):
+        if (i % 5 == 0) or (i == params['num_training_iters'] - 1):
             checkpoint_path = trainer.save()
             print(checkpoint_path)
