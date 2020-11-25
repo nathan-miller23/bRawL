@@ -31,8 +31,14 @@ def env_creator(env_config):
 register_env("SSBM", env_creator)
 trainer = dqn.DQNTrainer(env="SSBM", config = {
     "framework": "torch",
-    "env_config": {'dolphin_exe_path': '/Users/jimwang/Desktop/launchpad/bRawL/mocker/dolphin-emu.app/Contents/MacOS','ssbm_iso_path': '/Users/jimwang/Desktop/launchpad/SSMB.iso'}
+    "env_config": {'dolphin_exe_path': '/Users/jimwang/Desktop/launchpad/bRawL/mocker/dolphin-emu.app/Contents/MacOS','ssbm_iso_path': '/Users/jimwang/Desktop/launchpad/SSMB.iso'},
+    "exploration_config": {"epsilon_timesteps": 100000000}
 })
 
 
-print(trainer.train())
+for i in range(100):
+    info = trainer.train()
+    print("episode reward mean:", info['episode_reward_mean'], "num steps trained:", info['info']["num_steps_trained"])
+    if (i % 10 == 0):
+        checkpoint = trainer.save()
+        print('checkpoint saved at:', checkpoint)
