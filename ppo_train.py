@@ -133,8 +133,8 @@ def my_config():
     }
 
     #Custom environment parameters
-    dolphin_exe_path = "/Users/chevin/Desktop/Launchpad/bRawL/mocker/dolphin-emu.app/Contents/MacOS"
-    ssbm_iso_path = "/Users/chevin/Desktop/Launchpad/SSBISO/SSMB.iso"
+    dolphin_exe_path = "/Users/volk/Desktop/bRawL/dolphin-emu.app/Contents/MacOS"
+    ssbm_iso_path = "/Users/volk/Downloads/SSMB.iso"
     char1 = melee.Character.FOX
     char2 = melee.Character.FALCO
     stage = melee.Stage.FINAL_DESTINATION
@@ -167,9 +167,9 @@ def my_config():
     params= {
         "num_training_iters": num_training_iters,
         "rllib_params": {
-        "env_config": environment_params,
-        "monitor": True,
-        "framework": "torch",
+            "env_config": environment_params,
+            "monitor": True,
+            "framework": "torch",
         "preprocessor_pref":"deepmind",
         "num_workers" : num_workers,
         "train_batch_size" : train_batch_size,
@@ -208,6 +208,6 @@ def main(params):
         result = trainer.train()
         print("Iteration {}".format(i))
         print("Reward: {}", result['episode_reward_mean'])
-        if (i % 100 == 0) or (i == params['num_training_iters'] - 1):
+        if (i % 5 == 0) or (i == params['num_training_iters'] - 1):
             checkpoint_path = trainer.save()
             print(checkpoint_path)
