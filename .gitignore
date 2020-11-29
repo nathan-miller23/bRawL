@@ -354,3 +354,11 @@ MigrationBackup/
 
 # Super secret secrets
 **/mjkey.txt
+
+env
+*.iso
+*.dylib
+*.mo
+*.png
+mocker/dolphin-emu.app
+.vscode

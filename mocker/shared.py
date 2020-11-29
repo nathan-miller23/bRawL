@@ -24,9 +24,9 @@ def shell_cmd(*args):
     return proc
 
 def install_libmelee():
-    shell_cmd("git", "submodule", "update", "--init", "--remote")
     print("Will now install libmelee")
-    print("Make sure you are in a virtual environment and already ran pip install -r requirements.txt")
+    print("Make sure you are in a virtual environment and already ran git "
+          + "submodule update --init and pip install -r requirements.txt")
     if prompt(f"Ok to continue?", ["y", "n"]) == "y":
         subprocess.run(["python", "-m", "pip", "install", "-e", "../libmelee"])
         return True
