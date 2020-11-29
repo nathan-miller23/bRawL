@@ -29,9 +29,7 @@ if os.path.exists('slack.json') and not LOCAL_TESTING:
     SETTINGS.CAPTURE_MODE = 'sys'
 
 def _env_creator(env_config):
-    return SSBMEnv(env_config["dolphin_exe_path"], env_config["ssbm_iso_path"], char1=env_config["char1"], char2=env_config["char2"], 
-    stage=env_config["stage"], symmetric=env_config["symmetric"], cpu_level=env_config["cpu_level"], log=env_config["log"],
-    reward_func=env_config["reward_func"], render=env_config["render"])
+    return SSBMEnv(**env_config)
 
 def get_trainer_from_params(params):
     return PPOTrainer(env="melee", config=params['rllib_params'])
@@ -145,6 +143,9 @@ def my_config():
     log = False
     reward_func = None
     render = False
+    aggro_coeff = 1.0
+    shaping_coeff = 1.0
+    off_stage_weight = 10
 
     environment_params = {
         "dolphin_exe_path": dolphin_exe_path,
@@ -156,7 +157,11 @@ def my_config():
         "cpu_level": cpu_level,
         "log": log,
         "reward_func": reward_func,
-        "render": render
+        "render": render,
+        "aggro_coeff" : aggro_coeff,
+        "shaping_coeff" : shaping_coeff,
+        "off_stage_weight" : off_stage_weight,
+        "gamma" : gamma
     }
 
     params= {
@@ -217,6 +222,6 @@ def main(params):
         result = trainer.train()
         print("Iteration {}".format(i))
         print("Reward: {}", result['episode_reward_mean'])
-        if (i % 100 == 0) or (i == params['num_training_iters'] - 1):
+        if (i % 5 == 0) or (i == params['num_training_iters'] - 1):
             checkpoint_path = trainer.save()
             print(checkpoint_path)
