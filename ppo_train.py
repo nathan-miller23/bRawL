@@ -194,8 +194,9 @@ def my_config():
     }
 
 def increment_cpu_level(env):
-    env.cpu_level += 1
-    
+    if env.cpu_level < 10:
+        env.cpu_level += 1
+
 def on_train_result(info):
     result = info["result"]
     if result["episode_reward_mean"] > 200:
