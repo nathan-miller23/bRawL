@@ -27,6 +27,8 @@ def main(iso):
     shell_cmd("unzip", "./slippi.zip")
     shell_cmd("rm", "./slippi.zip")
     shell_cmd("mv", "Slippi Dolphin.app", "dolphin-emu.app")
+    shell_cmd("ln", "-s", "dolphin-emu.app/Contents/MacOS/Slippi Dolphin", "dolphin-emu.app/Contents/MacOS/dolphin-emu")
+    shell_cmd("chmod", "+x", "dolphin-emu.app/Contents/MacOS/Slippi Dolphin", "dolphin-emu.app/Contents/MacOS/dolphin-emu")
     shell_cmd("rm", "-rvf", "__MACOSX")
     shell_cmd("touch", "./dolphin-emu.app/Contents/MacOS/portable.txt")
     shell_cmd("wget", urls["gale"], "-O", "./dolphin-emu.app/Contents/Resources/Sys/GameSettings/GALE01r2.ini")
