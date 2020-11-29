@@ -135,8 +135,8 @@ def my_config():
     }
 
     #Custom environment parameters
-    dolphin_exe_path = "/Users/volk/Desktop/bRawL/dolphin-emu.app/Contents/MacOS"
-    ssbm_iso_path = "/Users/volk/Downloads/SSMB.iso"
+    dolphin_exe_path = "/Users/chevin/Desktop/Launchpad/bRawL/mocker/dolphin-emu.app/Contents/MacOS"
+    ssbm_iso_path = "/Users/chevin/Desktop/Launchpad/SSBMISO/SSMB.iso"
     char1 = melee.Character.FOX
     char2 = melee.Character.FALCO
     stage = melee.Stage.FINAL_DESTINATION
@@ -165,31 +165,44 @@ def my_config():
             "env_config": environment_params,
             "monitor": True,
             "framework": "torch",
-        "preprocessor_pref":"deepmind",
-        "num_workers" : num_workers,
-        "train_batch_size" : train_batch_size,
-        "sgd_minibatch_size" : sgd_minibatch_size,
-        "rollout_fragment_length" : rollout_fragment_length,
-        "num_sgd_iter" : num_sgd_iter,
-        "lr" : lr,
-        "lr_schedule" : lr_schedule,
-        "grad_clip" : grad_clip,
-        "gamma" : gamma,
-        "lambda" : lmbda,
-        "vf_share_layers" : vf_share_layers,
-        "vf_loss_coeff" : vf_loss_coeff,
-        "kl_coeff" : kl_coeff,
-        "clip_param" : clip_param,
-        "num_gpus" : num_gpus,
-        "seed" : seed,
-        "entropy_coeff_schedule" : [(0, entropy_coeff_start), (entropy_coeff_horizon, entropy_coeff_end)],
-        "model" : {"custom_model_config": model_params, "custom_model": "my_model"}},
+            "preprocessor_pref":"deepmind",
+            "num_workers" : num_workers,
+            "train_batch_size" : train_batch_size,
+            "sgd_minibatch_size" : sgd_minibatch_size,
+            "rollout_fragment_length" : rollout_fragment_length,
+            "num_sgd_iter" : num_sgd_iter,
+            "lr" : lr,
+            "lr_schedule" : lr_schedule,
+            "grad_clip" : grad_clip,
+            "gamma" : gamma,
+            "lambda" : lmbda,
+            "vf_share_layers" : vf_share_layers,
+            "vf_loss_coeff" : vf_loss_coeff,
+            "kl_coeff" : kl_coeff,
+            "clip_param" : clip_param,
+            "num_gpus" : num_gpus,
+            "seed" : seed,
+            "entropy_coeff_schedule" : [(0, entropy_coeff_start), (entropy_coeff_horizon, entropy_coeff_end)],
+            "model" : {"custom_model_config": model_params, "custom_model": "my_model"},
+            "callbacks": {"on_train_result": on_train_result}
+        },
         "explore": True,
         "exploration_config":{
             "type":"EpsilonGreedy",
             "epsilon_timesteps": 100000
         }
     }
+
+def increment_cpu_level(env):
+    env.cpu_level += 1
+    
+def on_train_result(info):
+    result = info["result"]
+    if result["episode_reward_mean"] > 200:
+        trainer = info["trainer"]
+        trainer.workers.foreach_worker(
+            lambda ev: ev.foreach_env(
+                lambda env: increment_cpu_level(env)))
 
 @ex.automain
 def main(params):
