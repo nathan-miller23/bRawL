@@ -14,6 +14,7 @@ from ray.rllib.agents.ppo.ppo import PPOTrainer
 # Local Imports
 from environments import *
 from models import *
+from libmelee import SSBMEnv
 
 # Create an experiment object
 from sacred import Experiment

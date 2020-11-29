@@ -3,15 +3,15 @@ from ray.rllib.models import ModelCatalog
 from ray.rllib.models.torch.torch_modelv2 import TorchModelV2
 from ray.tune.registry import register_env
 from ray.rllib.agents.ppo.ppo import PPOTrainer
-from models import *
+
 import gym
-from IPython import display
-import matplotlib
-import matplotlib.pyplot as plt
+from models import *
+import melee
+from melee import SSBMEnv
 
 import os
 from sacred import Experiment
-ex = Experiment("Rllib Example")
+ex = Experiment("PPO Libmelee Training")
 
 # Necessary work-around to make sacred pickling compatible with rllib
 from sacred import SETTINGS
@@ -29,10 +29,10 @@ if os.path.exists('slack.json') and not LOCAL_TESTING:
     SETTINGS.CAPTURE_MODE = 'sys'
 
 def _env_creator(env_config):
-    return gym.make("BreakoutNoFrameskip-v4")
+    return SSBMEnv(**env_config)
 
 def get_trainer_from_params(params):
-    return PPOTrainer(env="BreakoutNoFrameskip-v4", config=params['rllib_params'])
+    return PPOTrainer(env="melee", config=params['rllib_params'])
 
 #Smash env creator function
 
@@ -54,7 +54,7 @@ def my_config():
 
     ### Training Params ###
 
-    num_workers = 2
+    num_workers = 1
 
     # list of all random seeds to use for experiments, used to reproduce results
     seeds = [0]
@@ -63,7 +63,7 @@ def my_config():
     seed = None
 
     # Number of gpus the central driver should use
-    num_gpus = 2
+    num_gpus = 0
 
     # How many environment timesteps will be simulated (across all environments)
     # for one set of gradient updates. Is divided equally across environments
@@ -131,30 +131,66 @@ def my_config():
         "CELL_SIZE" : CELL_SIZE,
         "HIDDEN_OUTPUT_SIZE": 4900
     }
+
+    #Custom environment parameters
+    dolphin_exe_path = "/Users/chevin/Desktop/Launchpad/bRawL/mocker/dolphin-emu.app/Contents/MacOS"
+    ssbm_iso_path = "/Users/chevin/Desktop/Launchpad/SSBMISO/SSMB.iso"
+    char1 = melee.Character.FOX
+    char2 = melee.Character.FALCO
+    stage = melee.Stage.FINAL_DESTINATION
+    symmetric = False
+    cpu_level = 1
+    log = False
+    reward_func = None
+    render = False
+    aggro_coeff = 1.0
+    shaping_coeff = 1.0
+    off_stage_weight = 10
+
+    environment_params = {
+        "dolphin_exe_path": dolphin_exe_path,
+        "ssbm_iso_path": ssbm_iso_path,
+        "char1": char1,
+        "char2": char2,
+        "stage": stage,
+        "symmetric": symmetric,
+        "cpu_level": cpu_level,
+        "log": log,
+        "reward_func": reward_func,
+        "render": render,
+        "aggro_coeff" : aggro_coeff,
+        "shaping_coeff" : shaping_coeff,
+        "off_stage_weight" : off_stage_weight,
+        "gamma" : gamma
+    }
+
     params= {
         "num_training_iters": num_training_iters,
         "rllib_params": {
-        "monitor": True,
-        "framework": "torch",
-        "preprocessor_pref":"deepmind",
-        "num_workers" : num_workers,
-        "train_batch_size" : train_batch_size,
-        "sgd_minibatch_size" : sgd_minibatch_size,
-        "rollout_fragment_length" : rollout_fragment_length,
-        "num_sgd_iter" : num_sgd_iter,
-        "lr" : lr,
-        "lr_schedule" : lr_schedule,
-        "grad_clip" : grad_clip,
-        "gamma" : gamma,
-        "lambda" : lmbda,
-        "vf_share_layers" : vf_share_layers,
-        "vf_loss_coeff" : vf_loss_coeff,
-        "kl_coeff" : kl_coeff,
-        "clip_param" : clip_param,
-        "num_gpus" : num_gpus,
-        "seed" : seed,
-        "entropy_coeff_schedule" : [(0, entropy_coeff_start), (entropy_coeff_horizon, entropy_coeff_end)],
-        "model" : {"custom_options": model_params, "custom_model": "my_model"}},
+            "env_config": environment_params,
+            "monitor": True,
+            "framework": "torch",
+            "preprocessor_pref":"deepmind",
+            "num_workers" : num_workers,
+            "train_batch_size" : train_batch_size,
+            "sgd_minibatch_size" : sgd_minibatch_size,
+            "rollout_fragment_length" : rollout_fragment_length,
+            "num_sgd_iter" : num_sgd_iter,
+            "lr" : lr,
+            "lr_schedule" : lr_schedule,
+            "grad_clip" : grad_clip,
+            "gamma" : gamma,
+            "lambda" : lmbda,
+            "vf_share_layers" : vf_share_layers,
+            "vf_loss_coeff" : vf_loss_coeff,
+            "kl_coeff" : kl_coeff,
+            "clip_param" : clip_param,
+            "num_gpus" : num_gpus,
+            "seed" : seed,
+            "entropy_coeff_schedule" : [(0, entropy_coeff_start), (entropy_coeff_horizon, entropy_coeff_end)],
+            "model" : {"custom_model_config": model_params, "custom_model": "my_model"},
+            "callbacks": {"on_train_result": on_train_result}
+        },
         "explore": True,
         "exploration_config":{
             "type":"EpsilonGreedy",
@@ -162,19 +198,30 @@ def my_config():
         }
     }
 
+def increment_cpu_level(env):
+    if env.cpu_level < 10:
+        env.cpu_level += 1
+
+def on_train_result(info):
+    result = info["result"]
+    if result["episode_reward_mean"] > 200:
+        trainer = info["trainer"]
+        trainer.workers.foreach_worker(
+            lambda ev: ev.foreach_env(
+                lambda env: increment_cpu_level(env)))
+
 @ex.automain
 def main(params):
     ray.init()
     print(LOCAL_TESTING)
     ModelCatalog.register_custom_model("my_model", RllibPPOModel)
-    register_env("my_env", _env_creator)
-
+    register_env("melee", _env_creator)
     trainer = get_trainer_from_params(params)
-    
+    print("Trainer built")
     for i in range(params['num_training_iters']):
         result = trainer.train()
         print("Iteration {}".format(i))
         print("Reward: {}", result['episode_reward_mean'])
-        if (i % 100 == 0) or (i == params['num_training_iters'] - 1):
+        if (i % 5 == 0) or (i == params['num_training_iters'] - 1):
             checkpoint_path = trainer.save()
             print(checkpoint_path)
