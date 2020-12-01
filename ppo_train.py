@@ -45,7 +45,7 @@ def my_config():
 
     # Base model params
     NUM_HIDDEN_LAYERS = 3
-    SIZE_HIDDEN_LAYERS = 64
+    SIZE_HIDDEN_LAYERS = 128
     NUM_FILTERS = 25
     NUM_CONV_LAYERS = 3
 
@@ -133,12 +133,12 @@ def my_config():
     }
 
     #Custom environment parameters
-    dolphin_exe_path = "/Users/chevin/Desktop/Launchpad/bRawL/mocker/dolphin-emu.app/Contents/MacOS"
-    ssbm_iso_path = "/Users/chevin/Desktop/Launchpad/SSBMISO/SSMB.iso"
-    char1 = melee.Character.FOX
-    char2 = melee.Character.FALCO
+    dolphin_exe_path = "/Users/naregmegan/Desktop/Launchpad/bRawL/bRawL/mocker/dolphin-emu.app/Contents/MacOS"
+    ssbm_iso_path = "/Users/naregmegan/Desktop/SSMB.iso"
+    char1 = melee.Character.CPTFALCON
+    char2 = melee.Character.MARTH
     stage = melee.Stage.FINAL_DESTINATION
-    symmetric = False
+    cpu = True
     cpu_level = 1
     log = False
     reward_func = None
@@ -153,7 +153,7 @@ def my_config():
         "char1": char1,
         "char2": char2,
         "stage": stage,
-        "symmetric": symmetric,
+        "cpu": cpu,
         "cpu_level": cpu_level,
         "log": log,
         "reward_func": reward_func,
