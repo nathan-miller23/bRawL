@@ -1,5 +1,5 @@
 - Getting Started
-  - [Project Overview](README.md)
+  - [Project Overview](index/README.md)
 
 - Environment
   - [Dolphin](Dolphin/README.md)
