@@ -1,3 +1,3 @@
-# DQN Stuff
+# DQN
 
-Put stuff here
+DQN stuff here
