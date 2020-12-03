@@ -37,7 +37,7 @@ class RllibPPOModel(TorchModelV2, nn.Module):
         
         #modules.append(nn.InstanceNorm1d(39))
         
-        modules.append(nn.Linear(39, size_hidden_layers))
+        modules.append(nn.Linear(87, size_hidden_layers))
         modules.append(torch.nn.LeakyReLU())
         
         for i in range(num_hidden_layers - 1):
