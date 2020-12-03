@@ -104,12 +104,12 @@ def my_config():
     vf_share_layers = True
 
     # How much the loss of the value network is weighted in overall loss
-    vf_loss_coeff = 1e-4
+    vf_loss_coeff = 1e-6
 
     # Entropy bonus coefficient, will anneal linearly from _start to _end over _horizon steps
     entropy_coeff_start = 0.02
     entropy_coeff_end = 0.00005
-    entropy_coeff_horizon = 3e5
+    entropy_coeff_horizon = 2e6
 
     # Initial coefficient for KL divergence.
     kl_coeff = 0.2
@@ -190,11 +190,6 @@ def my_config():
             "entropy_coeff_schedule" : [(0, entropy_coeff_start), (entropy_coeff_horizon, entropy_coeff_end)],
             "model" : {"custom_model_config": model_params, "custom_model": "my_model"},
             "callbacks": {"on_train_result": on_train_result}
-        },
-        "explore": True,
-        "exploration_config":{
-            "type":"EpsilonGreedy",
-            "epsilon_timesteps": 100000
         }
     }
 
