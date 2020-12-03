@@ -1,10 +1,10 @@
-- Getting Started
+## Getting Started
   - [Project Overview](index/README.md)
 
-- Environment
+## Environment
   - [Dolphin](Dolphin/README.md)
   - [Libmelee](Libmelee/README.md)
-- Results
+## Results
   - [DQN](DQN/README.md)
   - [PPO](PPO/README.md)
 
