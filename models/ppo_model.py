@@ -14,6 +14,7 @@ class RllibPPOModel(TorchModelV2, nn.Module):
         TorchModelV2.__init__(self, obs_space, action_space, num_outputs, model_config, name)
         nn.Module.__init__(self)
 
+
         # params we got to pass in from the call to "run"
         custom_params = model_config["custom_model_config"]
 
@@ -36,8 +37,11 @@ class RllibPPOModel(TorchModelV2, nn.Module):
         modules.append(nn.Flatten())
         
         #modules.append(nn.InstanceNorm1d(39))
+        in_size = 1
+        for dim_size in obs_space.shape:
+            in_size *= dim_size
         
-        modules.append(nn.Linear(87, size_hidden_layers))
+        modules.append(nn.Linear(in_size, size_hidden_layers))
         modules.append(torch.nn.LeakyReLU())
         
         for i in range(num_hidden_layers - 1):

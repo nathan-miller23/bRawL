@@ -199,8 +199,7 @@ def my_config():
     }
 
 def increment_cpu_level(env):
-    if env.cpu_level < 10:
-        env.cpu_level += 1
+    env.cpu_level = max(env.cpu_level + 2, 9)
 
 def on_train_result(info):
     result = info["result"]
