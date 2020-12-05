@@ -3,6 +3,7 @@ from ray.rllib.models import ModelCatalog
 from ray.rllib.models.torch.torch_modelv2 import TorchModelV2
 from ray.tune.registry import register_env
 from ray.rllib.agents.ppo.ppo import PPOTrainer
+from ray.rllib.agents.callbacks import DefaultCallbacks
 
 import gym
 from models import *
@@ -44,8 +45,8 @@ def my_config():
     use_lstm = False
 
     # Base model params
-    NUM_HIDDEN_LAYERS = 3
-    SIZE_HIDDEN_LAYERS = 128
+    NUM_HIDDEN_LAYERS = 4
+    SIZE_HIDDEN_LAYERS = 200
     NUM_FILTERS = 25
     NUM_CONV_LAYERS = 3
 
@@ -68,15 +69,15 @@ def my_config():
     # How many environment timesteps will be simulated (across all environments)
     # for one set of gradient updates. Is divided equally across environments
     # train_batch_size = 40000 if not LOCAL_TESTING else 800
-    train_batch_size = 4000
+    train_batch_size = 6000
 
     # size of minibatches we divide up each batch into before
     # performing gradient steps
     # sgd_minibatch_size = 10000 if not LOCAL_TESTING else 800
-    sgd_minibatch_size = 128
+    sgd_minibatch_size = 1000
 
     # Rollout length
-    rollout_fragment_length = 200
+    rollout_fragment_length = 800
     
     # Whether all PPO agents should share the same policy network
     shared_policy = True
@@ -85,7 +86,7 @@ def my_config():
     num_training_iters = 2000 
 
     # Stepsize of SGD.
-    lr = 5e-3
+    lr = 5e-4
 
     # Learning rate schedule.
     lr_schedule = None
@@ -94,22 +95,22 @@ def my_config():
     grad_clip = 0.1
 
     # Discount factor
-    gamma = 0.99
+    gamma = 0.95
 
     # Exponential decay factor for GAE (how much weight to put on monte carlo samples)
     # Reference: https://arxiv.org/pdf/1506.02438.pdf
-    lmbda = 0.98
+    lmbda = 0.95
 
     # Whether the value function shares layers with the policy model
     vf_share_layers = True
 
     # How much the loss of the value network is weighted in overall loss
-    vf_loss_coeff = 1e-4
+    vf_loss_coeff = 1e-2
 
     # Entropy bonus coefficient, will anneal linearly from _start to _end over _horizon steps
-    entropy_coeff_start = 0.02
-    entropy_coeff_end = 0.00005
-    entropy_coeff_horizon = 3e5
+    entropy_coeff_start = 5e-3
+    entropy_coeff_end = 1e-5
+    entropy_coeff_horizon = 1e6
 
     # Initial coefficient for KL divergence.
     kl_coeff = 0.2
@@ -119,7 +120,7 @@ def my_config():
 
     # Number of SGD iterations in each outer loop (i.e., number of epochs to
     # execute per train batch).
-    num_sgd_iter = 8 
+    num_sgd_iter = 8
 
     # To be passed into rl-lib model/custom_options config
     model_params = {
@@ -133,13 +134,13 @@ def my_config():
     }
 
     #Custom environment parameters
-    dolphin_exe_path = "/Users/naregmegan/Desktop/Launchpad/bRawL/bRawL/mocker/dolphin-emu.app/Contents/MacOS"
-    ssbm_iso_path = "/Users/naregmegan/Desktop/SSMB.iso"
+    dolphin_exe_path = "/Applications/dolphin-emu.app/Contents/MacOS"
+    ssbm_iso_path = "/Users/nathan/games/melee/SSMB.iso"
     char1 = melee.Character.CPTFALCON
     char2 = melee.Character.MARTH
     stage = melee.Stage.FINAL_DESTINATION
     cpu = True
-    cpu_level = 1
+    cpu_level = 2
     log = False
     reward_func = None
     render = False
@@ -189,25 +190,41 @@ def my_config():
             "seed" : seed,
             "entropy_coeff_schedule" : [(0, entropy_coeff_start), (entropy_coeff_horizon, entropy_coeff_end)],
             "model" : {"custom_model_config": model_params, "custom_model": "my_model"},
-            "callbacks": {"on_train_result": on_train_result}
-        },
-        "explore": True,
-        "exploration_config":{
-            "type":"EpsilonGreedy",
-            "epsilon_timesteps": 100000
+            "callbacks" : TrainingCallbacks
         }
     }
 
 def increment_cpu_level(env):
     env.cpu_level = max(env.cpu_level + 2, 9)
 
-def on_train_result(info):
-    result = info["result"]
-    if result["episode_reward_mean"] > 200:
-        trainer = info["trainer"]
-        trainer.workers.foreach_worker(
-            lambda ev: ev.foreach_env(
-                lambda env: increment_cpu_level(env)))
+class TrainingCallbacks(DefaultCallbacks):
+
+    def on_train_result(self, trainer, result, **kwargs):
+        my_kills = result['custom_metrics']["KOs_ai_1_mean"]
+        if False:
+            trainer.workers.foreach_worker(
+                lambda ev: ev.foreach_env(
+                    lambda env: increment_cpu_level(env)))
+
+    def on_episode_end(self, worker, base_env, policies, episode, **kwargs):
+            """
+            Used in order to add custom metrics to our tensorboard data
+
+            sparse_reward (int) - total reward from deliveries agent earned this episode
+            shaped_reward (int) - total reward shaping reward the agent earned this episode
+            """
+            # Get SSBMEnv.py env from rllib wrapper
+            env = base_env.get_unwrapped()[0]
+
+            # List of episode stats we'd like to collect by agent
+            stats_to_collect = env.vals_to_log
+
+            # Store per-agent game stats to rllib info dicts
+            for stat in stats_to_collect:
+                for agent in env.agents:
+                    info_dict = episode.last_info_for(agent)
+                    episode.custom_metrics[stat + "_" + agent] = info_dict[stat]
+
 
 @ex.automain
 def main(params):
