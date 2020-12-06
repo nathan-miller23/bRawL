@@ -9,7 +9,7 @@ from models import *
 import melee
 from melee import SSBMEnv
 
-import os
+import os, copy, dill
 from sacred import Experiment
 ex = Experiment("PPO Libmelee Training")
 
@@ -44,7 +44,7 @@ def my_config():
     use_lstm = False
 
     # Base model params
-    NUM_HIDDEN_LAYERS = 3
+    NUM_HIDDEN_LAYERS = 4
     SIZE_HIDDEN_LAYERS = 128
     NUM_FILTERS = 25
     NUM_CONV_LAYERS = 3
@@ -68,12 +68,12 @@ def my_config():
     # How many environment timesteps will be simulated (across all environments)
     # for one set of gradient updates. Is divided equally across environments
     # train_batch_size = 40000 if not LOCAL_TESTING else 800
-    train_batch_size = 4000
+    train_batch_size = 6000
 
     # size of minibatches we divide up each batch into before
     # performing gradient steps
     # sgd_minibatch_size = 10000 if not LOCAL_TESTING else 800
-    sgd_minibatch_size = 128
+    sgd_minibatch_size = 1000
 
     # Rollout length
     rollout_fragment_length = 200
@@ -85,7 +85,7 @@ def my_config():
     num_training_iters = 2000 
 
     # Stepsize of SGD.
-    lr = 5e-3
+    lr = 5e-5
 
     # Learning rate schedule.
     lr_schedule = None
@@ -101,10 +101,10 @@ def my_config():
     lmbda = 0.98
 
     # Whether the value function shares layers with the policy model
-    vf_share_layers = True
+    vf_share_layers = False
 
     # How much the loss of the value network is weighted in overall loss
-    vf_loss_coeff = 1e-6
+    vf_loss_coeff = 2e-2
 
     # Entropy bonus coefficient, will anneal linearly from _start to _end over _horizon steps
     entropy_coeff_start = 0.02
@@ -133,8 +133,8 @@ def my_config():
     }
 
     #Custom environment parameters
-    dolphin_exe_path = "/Users/naregmegan/Desktop/Launchpad/bRawL/bRawL/mocker/dolphin-emu.app/Contents/MacOS"
-    ssbm_iso_path = "/Users/naregmegan/Desktop/SSMB.iso"
+    dolphin_exe_path = "/Users/chevin/Desktop/Launchpad/bRawL/mocker/dolphin-emu.app/Contents/MacOS"
+    ssbm_iso_path = "/Users/chevin/Desktop/Launchpad/SSBMISO/SSMB.iso"
     char1 = melee.Character.CPTFALCON
     char2 = melee.Character.MARTH
     stage = melee.Stage.FINAL_DESTINATION
@@ -196,6 +196,7 @@ def my_config():
 def increment_cpu_level(env):
     if env.cpu_level < 10:
         env.cpu_level += 1
+        print("New cpu level: ", env.cpu_level)
 
 def on_train_result(info):
     result = info["result"]
@@ -204,6 +205,45 @@ def on_train_result(info):
         trainer.workers.foreach_worker(
             lambda ev: ev.foreach_env(
                 lambda env: increment_cpu_level(env)))
+
+def save_trainer(trainer, params, path=None):
+    """
+    Saves a serialized trainer checkpoint at `path`. If none provided, the default path is
+    ~/ray_results/<experiment_results_dir>/checkpoint_<i>/checkpoint-<i>
+    Note that `params` should follow the same schema as the dict passed into `gen_trainer_from_params`
+    """
+    # Save trainer
+    save_path = trainer.save(path)
+
+    # Save params used to create trainer in /path/to/checkpoint_dir/config.pkl
+    config = copy.deepcopy(params)
+    config_path = os.path.join(os.path.dirname(save_path), "config.pkl")
+
+    # Note that we use dill (not pickle) here because it supports function serialization
+    with open(config_path, "wb") as f:
+        dill.dump(config, f)
+    return save_path
+
+def load_trainer(save_path):
+    """
+    Returns a ray compatible trainer object that was previously saved at `save_path` by a call to `save_trainer`
+    Note that `save_path` is the full path to the checkpoint FILE, not the checkpoint directory
+    """
+    # Read in params used to create trainer
+    config_path = os.path.join(os.path.dirname(save_path), "config.pkl")
+    with open(config_path, "rb") as f:
+        # We use dill (instead of pickle) here because we must deserialize functions
+        config = dill.load(f)
+    
+    # Override this param to lower overhead in trainer creation
+    config['training_params']['num_workers'] = 0
+
+    # Get un-trained trainer object with proper config
+    trainer = gen_trainer_from_params(config)
+
+    # Load weights into dummy object
+    trainer.restore(save_path)
+    return trainer
 
 @ex.automain
 def main(params):
@@ -218,5 +258,4 @@ def main(params):
         print("Iteration {}".format(i))
         print("Reward: {}", result['episode_reward_mean'])
         if (i % 5 == 0) or (i == params['num_training_iters'] - 1):
-            checkpoint_path = trainer.save()
-            print(checkpoint_path)
+            save_trainer(trainer, params)
