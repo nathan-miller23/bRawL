@@ -24,36 +24,35 @@ class RllibPPOModel(TorchModelV2, nn.Module):
         num_convs = custom_params["NUM_CONV_LAYERS"]
         hidden_output_size = custom_params["HIDDEN_OUTPUT_SIZE"]
 
-        modules = []
-       # if num_convs > 0:
-       #     modules.append(torch.nn.Conv2d(obs_space.shape[-1], num_filters, kernel_size=[5, 5], padding=3))
-       #     modules.append(torch.nn.LeakyReLU())
-       #     modules.append(torch.nn.MaxPool2d(2, stride=2, padding=1))
-       # for i in range(0, num_convs-1):
-       #     modules.append(torch.nn.Conv2d(num_filters, num_filters, kernel_size=[3, 3], padding=2))
-       #     modules.append(torch.nn.LeakyReLU())
-       #     modules.append(torch.nn.MaxPool2d(2, stride=2, padding=1))
-        modules.append(nn.Flatten())
-        
-        #modules.append(nn.InstanceNorm1d(39))
-        
-        modules.append(nn.Linear(87, size_hidden_layers))
-        modules.append(torch.nn.LeakyReLU())
+        policy_modules = []
+        policy_modules.append(nn.Flatten())
+        policy_modules.append(nn.Linear(1044, size_hidden_layers))
+        policy_modules.append(torch.nn.LeakyReLU())
         
         for i in range(num_hidden_layers - 1):
-            modules.append(torch.nn.Linear(size_hidden_layers, size_hidden_layers))
-            modules.append(torch.nn.LeakyReLU())
-        self.layers = nn.Sequential(*modules)
+            policy_modules.append(torch.nn.Linear(size_hidden_layers, size_hidden_layers))
+            policy_modules.append(torch.nn.LeakyReLU())
         self._num_outputs = num_outputs
-        self.model_out = torch.nn.Linear(size_hidden_layers, self._num_outputs)
-        self.value_out = torch.nn.Linear(size_hidden_layers, 1)
+        policy_modules.append(torch.nn.Linear(size_hidden_layers, self._num_outputs))
+        self.model_out = nn.Sequential(*policy_modules)
+
+        value_modules = []
+        value_modules.append(nn.Flatten())
+        value_modules.append(nn.Linear(1044, size_hidden_layers))
+        value_modules.append(torch.nn.LeakyReLU())
+        
+        for i in range(num_hidden_layers - 1):
+            value_modules.append(torch.nn.Linear(size_hidden_layers, size_hidden_layers))
+            value_modules.append(torch.nn.LeakyReLU())
+        value_modules.append(torch.nn.Linear(size_hidden_layers, 1))
+        self.value_out = nn.Sequential(*value_modules)
+    
 
     def forward(self, input_dict, state=None, seq_lens=None):
-        obs = input_dict["obs"].float()#.permute(0,3,1,2)
+        obs = input_dict["obs"].float()
         obs = obs / np.linalg.norm(obs)
-        hidden = self.layers(obs)
-        model_out = self.model_out(hidden).view(-1, self._num_outputs)
-        self._value_out = self.value_out(hidden)
+        model_out = self.model_out(obs).view(-1, self._num_outputs)
+        self._value_out = self.value_out(obs)
         return model_out, state
 
     def value_function(self):
