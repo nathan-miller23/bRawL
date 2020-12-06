@@ -14,6 +14,7 @@ class RllibPPOModel(TorchModelV2, nn.Module):
         TorchModelV2.__init__(self, obs_space, action_space, num_outputs, model_config, name)
         nn.Module.__init__(self)
 
+
         # params we got to pass in from the call to "run"
         custom_params = model_config["custom_model_config"]
 
@@ -25,8 +26,22 @@ class RllibPPOModel(TorchModelV2, nn.Module):
         hidden_output_size = custom_params["HIDDEN_OUTPUT_SIZE"]
 
         policy_modules = []
+       # if num_convs > 0:
+       #     modules.append(torch.nn.Conv2d(obs_space.shape[-1], num_filters, kernel_size=[5, 5], padding=3))
+       #     modules.append(torch.nn.LeakyReLU())
+       #     modules.append(torch.nn.MaxPool2d(2, stride=2, padding=1))
+       # for i in range(0, num_convs-1):
+       #     modules.append(torch.nn.Conv2d(num_filters, num_filters, kernel_size=[3, 3], padding=2))
+       #     modules.append(torch.nn.LeakyReLU())
+       #     modules.append(torch.nn.MaxPool2d(2, stride=2, padding=1))
         policy_modules.append(nn.Flatten())
-        policy_modules.append(nn.Linear(1044, size_hidden_layers))
+        
+        #modules.append(nn.InstanceNorm1d(39))
+        in_size = 1
+        for dim_size in obs_space.shape:
+            in_size *= dim_size
+        
+        policy_modules.append(nn.Linear(in_size, size_hidden_layers))
         policy_modules.append(torch.nn.LeakyReLU())
         
         for i in range(num_hidden_layers - 1):
@@ -38,7 +53,7 @@ class RllibPPOModel(TorchModelV2, nn.Module):
 
         value_modules = []
         value_modules.append(nn.Flatten())
-        value_modules.append(nn.Linear(1044, size_hidden_layers))
+        value_modules.append(nn.Linear(in_size, size_hidden_layers))
         value_modules.append(torch.nn.LeakyReLU())
         
         for i in range(num_hidden_layers - 1):
