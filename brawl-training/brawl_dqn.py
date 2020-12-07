@@ -13,11 +13,11 @@ import os, sys
 
 #Following lines are for assigning parent directory dynamically.
 
-dir_path = os.path.dirname(os.path.realpath('libmelee/melee/SSBMEnv.py'))
+#dir_path = os.path.dirname(os.path.realpath('libmelee/melee/SSBMEnv.py'))
 
-parent_dir_path = os.path.abspath(os.path.join(dir_path, os.pardir))
+#parent_dir_path = os.path.abspath(os.path.join(dir_path, os.pardir))
 
-sys.path.insert(0, parent_dir_path)
+#sys.path.insert(0, parent_dir_path)
 
 
 from melee.SSBMEnv import SSBMEnv
@@ -67,18 +67,17 @@ trainer = dqn.DQNTrainer(env="SSBM", config = {
     "gamma": 0.999,
     "framework": "torch",
     "env_config": {'dolphin_exe_path': '/Users/jimwang/Desktop/launchpad/bRawL/mocker/dolphin-emu.app/Contents/MacOS','ssbm_iso_path': '/Users/jimwang/Desktop/launchpad/SSMB.iso'},
-    "exploration_config": {"epsilon_timesteps": 3000000},
+    "exploration_config": {"epsilon_timesteps": 400000},
     "hiddens": [256, 256],
     "output": 'brawl-training/results',
-    "monitor": True,
-    "lr": 1e-5
+    "lr": 1e-4
 })
 
 policy = trainer.get_policy()
 model = policy.q_model
 print(model)
 
-#trainer.restore('/Users/jimwang/ray_results/DQN_SSBM_2020-12-04_05-02-006b64djc4/checkpoint_411/checkpoint-411')
+#trainer.restore('/Users/jimwang/ray_results/DQN_SSBM_2020-12-05_23-08-15ognrsamx/checkpoint_351/checkpoint-351')
 for i in range(5000):
     info = trainer.train()
     print("episode reward mean:", info['episode_reward_mean'], "num steps trained:", info['info']["num_steps_trained"])
