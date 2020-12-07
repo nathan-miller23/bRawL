@@ -45,9 +45,9 @@ def my_config():
     use_lstm = False
 
     # Base model params
-    NUM_HIDDEN_LAYERS = 4
+    NUM_HIDDEN_LAYERS = 1
     SIZE_HIDDEN_LAYERS = 128
-    NUM_FILTERS = 25
+    NUM_FILTERS = 64
     NUM_CONV_LAYERS = 3
 
     # LSTM memory cell size (only used if use_lstm=True)
@@ -55,7 +55,11 @@ def my_config():
 
     ### Training Params ###
 
-    num_workers = 1
+    num_workers = 0
+
+    batch_mode = "truncate_episodes"
+
+    sample_async = True
 
     # list of all random seeds to use for experiments, used to reproduce results
     seeds = [0]
@@ -69,15 +73,15 @@ def my_config():
     # How many environment timesteps will be simulated (across all environments)
     # for one set of gradient updates. Is divided equally across environments
     # train_batch_size = 40000 if not LOCAL_TESTING else 800
-    train_batch_size = 6000
+    train_batch_size = 8000
 
     # size of minibatches we divide up each batch into before
     # performing gradient steps
-    # sgd_minibatch_size = 10000 if not LOCAL_TESTING else 800
+    # sgd_minibatch_size = 10000 if not LOCAL_TESTIsNG else 800
     sgd_minibatch_size = 1000
 
     # Rollout length
-    rollout_fragment_length = 800
+    rollout_fragment_length = 400
     
     # Whether all PPO agents should share the same policy network
     shared_policy = True
@@ -95,20 +99,20 @@ def my_config():
     grad_clip = 0.1
 
     # Discount factor
-    gamma = 0.95
+    gamma = 0.995
 
     # Exponential decay factor for GAE (how much weight to put on monte carlo samples)
     # Reference: https://arxiv.org/pdf/1506.02438.pdf
-    lmbda = 0.95
+    lmbda = 0.98
 
     # Whether the value function shares layers with the policy model
-    vf_share_layers = False
+    vf_share_layers = True
 
     # How much the loss of the value network is weighted in overall loss
     vf_loss_coeff = 1e-2
 
     # Entropy bonus coefficient, will anneal linearly from _start to _end over _horizon steps
-    entropy_coeff_start = 5e-3
+    entropy_coeff_start = 5e-2
     entropy_coeff_end = 1e-5
     entropy_coeff_horizon = 1e6
 
@@ -134,8 +138,8 @@ def my_config():
     }
 
     #Custom environment parameters
-    dolphin_exe_path = "/Users/chevin/Desktop/Launchpad/bRawL/mocker/dolphin-emu.app/Contents/MacOS"
-    ssbm_iso_path = "/Users/chevin/Desktop/Launchpad/SSBMISO/SSMB.iso"
+    dolphin_exe_path = "/Applications/dolphin-emu.app/Contents/MacOS"
+    ssbm_iso_path = "/Users/nathan/games/melee/SSMB.iso"
     char1 = melee.Character.CPTFALCON
     char2 = melee.Character.MARTH
     stage = melee.Stage.FINAL_DESTINATION
@@ -147,6 +151,8 @@ def my_config():
     aggro_coeff = 1.0
     shaping_coeff = 1.0
     off_stage_weight = 10
+    every_nth = 1
+    buffer_size = 64
 
     environment_params = {
         "dolphin_exe_path": dolphin_exe_path,
@@ -162,7 +168,9 @@ def my_config():
         "aggro_coeff" : aggro_coeff,
         "shaping_coeff" : shaping_coeff,
         "off_stage_weight" : off_stage_weight,
-        "gamma" : gamma
+        "gamma" : gamma,
+        "every_nth" : every_nth,
+        "buffer_size" : buffer_size
     }
 
     params= {
@@ -173,6 +181,8 @@ def my_config():
             "framework": "torch",
             "preprocessor_pref":"deepmind",
             "num_workers" : num_workers,
+            "batch_mode" : batch_mode,
+            "sample_async" : sample_async,
             "train_batch_size" : train_batch_size,
             "sgd_minibatch_size" : sgd_minibatch_size,
             "rollout_fragment_length" : rollout_fragment_length,
@@ -200,8 +210,8 @@ def increment_cpu_level(env):
 class TrainingCallbacks(DefaultCallbacks):
 
     def on_train_result(self, trainer, result, **kwargs):
-        my_kills = result['custom_metrics']["KOs_ai_1_mean"]
-        if result['episode_reward_mean'] > 200:
+        my_kills = result['custom_metrics'].get("KOs_ai_1_mean", 0)
+        if my_kills > 3:
             trainer.workers.foreach_worker(
                 lambda ev: ev.foreach_env(
                     lambda env: increment_cpu_level(env)))
@@ -259,7 +269,7 @@ def load_trainer(save_path):
     config['training_params']['num_workers'] = 0
 
     # Get un-trained trainer object with proper config
-    trainer = gen_trainer_from_params(config)
+    trainer = get_trainer_from_params(config)
 
     # Load weights into dummy object
     trainer.restore(save_path)
