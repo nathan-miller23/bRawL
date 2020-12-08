@@ -1,4 +1,4 @@
 [submodule "libmelee"]
 	path = libmelee
-	url = git@github.com:nathan-miller23/libmelee.git
+	url = https://github.com/nathan-miller23/libmelee.git
 	branch = master
