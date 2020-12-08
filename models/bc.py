@@ -86,13 +86,13 @@ class LinearBufferAgent(BCAgent):
     def __init__(self, buffer_len, num_states, num_actions):
         self.buffer_len = buffer_len
         agent = nn.Sequential(
-            nn.Linear(num_states * buffer_len, 40),
+            nn.Linear(num_states * buffer_len, 256),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(40, 40),
+            nn.Linear(256, 256),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(40, num_actions)
+            nn.Linear(256, num_actions)
         ).to(device)
         super().__init__(agent)
     
@@ -102,6 +102,36 @@ class LinearBufferAgent(BCAgent):
             x = x.unsqueeze(0)
         # Unroll buffer into flat array w/o disrupting batching
         return self.agent(torch.flatten(x, start_dim=1))
+    
+class ConvAgent(BCAgent):
+    def __init__(self, buffer_len, num_states, num_actions):
+        size_hidden_layers = 1024
+        num_convs = 2
+        num_filters = 8
+        obs_space_shape = num_states
+        policy_modules = []
+        if num_convs > 0:
+            policy_modules.append(nn.Conv1d(obs_space_shape, num_filters, kernel_size=3, padding=1))
+            policy_modules.append(torch.nn.LeakyReLU())
+        for _ in range(num_convs-1):
+            policy_modules.append(torch.nn.Conv1d(num_filters, num_filters, kernel_size=3, padding=1))
+            policy_modules.append(torch.nn.LeakyReLU())
+        policy_modules.append(nn.Flatten())
+        
+        #modules.append(nn.InstanceNorm1d(39))
+        in_size = num_filters * obs_space.shape[1] if num_convs > 0 else obs_space.shape[0] * obs_space.shape[1]
+        
+        policy_modules.append(nn.Linear(in_size, size_hidden_layers))
+        policy_modules.append(torch.nn.LeakyReLU())
+        
+        for i in range(num_hidden_layers - 1):
+            policy_modules.append(torch.nn.Linear(size_hidden_layers, size_hidden_layers))
+            policy_modules.append(torch.nn.LeakyReLU())
+
+        self._num_outputs = num_outputs
+        self.shared = nn.Sequential(*policy_modules)
+        self.policy_out = nn.Linear(size_hidden_layers, self._num_outputs)
+        self.value_out = nn.Linear(size_hidden_layers, 1)
 
 class RLLibAgent(BCAgent):
     def __init__(self, num_states, num_actions):
