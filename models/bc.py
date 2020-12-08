@@ -20,9 +20,9 @@ def states_from_file(file):
     states = []
     actions = []
     for sa in json_data:
-        states.append(np.array([float(x) for x in sa["state"]["ai_1"]]))
+        states.append(np.array(sa["state"]["ai_1"]))
         actions.append(int(sa["ai_1"]))
-    dim_states = len(states[0])
+    dim_states = states[0].shape
     num_actions = max(actions) + 1
     return states, actions, dim_states, num_actions
     
@@ -37,7 +37,7 @@ def states_from_folder(folder):
         new_states, new_actions, _dim_states, _num_actions = states_from_file(file)
         states += new_states
         actions += new_actions
-        dim_states = max(dim_states, _dim_states)
+        dim_states = _dim_states
         num_actions = max(num_actions, _num_actions)
     return states, actions, dim_states, num_actions
 
@@ -80,6 +80,28 @@ class LinearAgent(BCAgent):
             nn.Linear(40, num_actions)
         ).to(device)
         super().__init__(agent)
+
+class LinearBufferAgent(BCAgent):
+    """For use with 2D buffer"""
+    def __init__(self, buffer_len, num_states, num_actions):
+        self.buffer_len = buffer_len
+        agent = nn.Sequential(
+            nn.Linear(num_states * buffer_len, 40),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(40, 40),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(40, num_actions)
+        ).to(device)
+        super().__init__(agent)
+    
+    def forward(self, x):
+        # Add batch dimension to gym input
+        if len(x.shape) < 3:
+            x = x.unsqueeze(0)
+        # Unroll buffer into flat array w/o disrupting batching
+        return self.agent(torch.flatten(x, start_dim=1))
 
 class RLLibAgent(BCAgent):
     def __init__(self, num_states, num_actions):
@@ -137,11 +159,11 @@ def train(bc_agent, train_dataloader, test_dataloader, num_actions, num_epochs):
     plt.plot(range(len(test_total_losses)), test_total_losses)
     plt.show()
 
-def play(bc_agent, cpu_level):
+def play(bc_agent, cpu_level, buffer_size, frame_skip):
     with torch.no_grad():
         env = SSBMEnv('../mocker/dolphin-emu.app/Contents/MacOS',
                     ssbm_iso_path='../mocker/m.iso',
-                    cpu=True, cpu_level=cpu_level)
+                    cpu=True, cpu_level=cpu_level, every_nth=frame_skip, buffer_size=buffer_size)
         obs = env.reset()
         done = False
         while not done:
