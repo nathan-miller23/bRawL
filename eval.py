@@ -48,7 +48,8 @@ class PolicyFromTorch():
         self.agent.load_state(path)
 
     def action(self, observation):
-        return self.agent(observation)
+        logits = self.agent(torch.FloatTensor(observation))
+        return torch.distributions.categorical.Categorical(logits=logits).sample()
 
 def evaluate(env, policy_1, policy_2):
     done = False
