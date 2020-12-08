@@ -2,7 +2,7 @@ import ray
 from ray.rllib.models import ModelCatalog
 from ray.rllib.models.torch.torch_modelv2 import TorchModelV2
 from ray.tune.registry import register_env
-from ray.rllib.agents.ppo.ppo import PPOTrainer
+from ray.rllib.agents.dqn.dqn import DQNTrainer
 from ray.rllib.agents.callbacks import DefaultCallbacks
 
 import gym
@@ -12,7 +12,7 @@ from melee import SSBMEnv
 
 import os, copy, dill
 from sacred import Experiment
-ex = Experiment("PPO Libmelee Training")
+ex = Experiment("DQN Libmelee Training")
 
 # Necessary work-around to make sacred pickling compatible with rllib
 from sacred import SETTINGS
@@ -33,7 +33,7 @@ def _env_creator(env_config):
     return SSBMEnv(**env_config)
 
 def get_trainer_from_params(params):
-    return PPOTrainer(env="melee", config=params['rllib_params'])
+    return DQNTrainer(env="melee", config=params['rllib_params'])
 
 #Smash env creator function
 
@@ -41,21 +41,15 @@ def get_trainer_from_params(params):
 def my_config():
     ### Model params ###
 
-    # whether to use recurrence in ppo model
-    use_lstm = False
-
     # Base model params
-    NUM_HIDDEN_LAYERS = 1
+    NUM_HIDDEN_LAYERS = 0
     SIZE_HIDDEN_LAYERS = 128
     NUM_FILTERS = 64
     NUM_CONV_LAYERS = 3
 
-    # LSTM memory cell size (only used if use_lstm=True)
-    CELL_SIZE = 256
-
     ### Training Params ###
 
-    num_workers = 0
+    num_workers = 1
 
     batch_mode = "truncate_episodes"
 
@@ -70,21 +64,14 @@ def my_config():
     # Number of gpus the central driver should use
     num_gpus = 0
 
-    # How many environment timesteps will be simulated (across all environments)
-    # for one set of gradient updates. Is divided equally across environments
-    # train_batch_size = 40000 if not LOCAL_TESTING else 800
-    train_batch_size = 8000
+    # Sampled from replay buffer
+    train_batch_size = 64
 
-    # size of minibatches we divide up each batch into before
-    # performing gradient steps
-    # sgd_minibatch_size = 10000 if not LOCAL_TESTIsNG else 800
-    sgd_minibatch_size = 1000
+    # When to begin q-updates
+    learning_starts = 10000
 
     # Rollout length
-    rollout_fragment_length = 400
-    
-    # Whether all PPO agents should share the same policy network
-    shared_policy = True
+    rollout_fragment_length = 4
 
     # Number of training iterations to run
     num_training_iters = 2000 
@@ -101,40 +88,29 @@ def my_config():
     # Discount factor
     gamma = 0.995
 
-    # Exponential decay factor for GAE (how much weight to put on monte carlo samples)
-    # Reference: https://arxiv.org/pdf/1506.02438.pdf
-    lmbda = 0.98
-
-    # Whether the value function shares layers with the policy model
-    vf_share_layers = True
-
-    # How much the loss of the value network is weighted in overall loss
-    vf_loss_coeff = 1e-2
-
-    # Entropy bonus coefficient, will anneal linearly from _start to _end over _horizon steps
-    entropy_coeff_start = 5e-2
-    entropy_coeff_end = 1e-5
-    entropy_coeff_horizon = 1e6
-
-    # Initial coefficient for KL divergence.
-    kl_coeff = 0.2
-
-    # PPO clipping factor
-    clip_param = 0.05
-
-    # Number of SGD iterations in each outer loop (i.e., number of epochs to
-    # execute per train batch).
-    num_sgd_iter = 8
+    num_atoms = 1
+    v_min = -200.0
+    v_max = 200.0
+    # Whether to use noisy network
+    noisy = True
+    # control the initial value of noisy nets
+    sigma0 = 0.2
+    # Whether to use dueling dqn
+    dueling = True
+    # Dense-layer setup for each the advantage branch and the value branch
+    # in a dueling architecture.
+    hiddens = [256]
+    # Whether to use double dqn
+    double_q = True
+    # N-step Q learning
+    n_step = 5
 
     # To be passed into rl-lib model/custom_options config
     model_params = {
-        "use_lstm" : use_lstm,
         "NUM_HIDDEN_LAYERS" : NUM_HIDDEN_LAYERS,
         "SIZE_HIDDEN_LAYERS" : SIZE_HIDDEN_LAYERS,
         "NUM_FILTERS" : NUM_FILTERS,
-        "NUM_CONV_LAYERS" : NUM_CONV_LAYERS,
-        "CELL_SIZE" : CELL_SIZE,
-        "HIDDEN_OUTPUT_SIZE": 4900
+        "NUM_CONV_LAYERS" : NUM_CONV_LAYERS
     }
 
     #Custom environment parameters
@@ -179,28 +155,35 @@ def my_config():
             "env_config": environment_params,
             "monitor": True,
             "framework": "torch",
-            "preprocessor_pref":"deepmind",
             "num_workers" : num_workers,
             "batch_mode" : batch_mode,
             "sample_async" : sample_async,
             "train_batch_size" : train_batch_size,
-            "sgd_minibatch_size" : sgd_minibatch_size,
             "rollout_fragment_length" : rollout_fragment_length,
-            "num_sgd_iter" : num_sgd_iter,
+            "num_atoms" : num_atoms,
+            "v_min" : v_min,
+            "v_max" : v_max,
+            "noisy" : noisy,
+            "sigma0" : sigma0,
+            "dueling" : dueling,
+            "hiddens" : hiddens,
+            "double_q" : double_q,
+            "n_step" : n_step,
             "lr" : lr,
             "lr_schedule" : lr_schedule,
             "grad_clip" : grad_clip,
             "gamma" : gamma,
-            "lambda" : lmbda,
-            "vf_share_layers" : vf_share_layers,
-            "vf_loss_coeff" : vf_loss_coeff,
-            "kl_coeff" : kl_coeff,
-            "clip_param" : clip_param,
             "num_gpus" : num_gpus,
             "seed" : seed,
-            "entropy_coeff_schedule" : [(0, entropy_coeff_start), (entropy_coeff_horizon, entropy_coeff_end)],
             "model" : {"custom_model_config": model_params, "custom_model": "my_model"},
-            "callbacks" : TrainingCallbacks
+            "callbacks" : TrainingCallbacks,
+            "exploration_config": {
+                "type": "EpsilonGreedy",
+                "initial_epsilon": 1.0,
+                "final_epsilon": 0.00,
+                "epsilon_timesteps": 1000000
+            },
+            "learning_starts" : learning_starts
         }
     }
 
@@ -279,7 +262,7 @@ def load_trainer(save_path):
 def main(params):
     ray.init()
     print(LOCAL_TESTING)
-    ModelCatalog.register_custom_model("my_model", RllibPPOModel)
+    ModelCatalog.register_custom_model("my_model", RllibDQNModel)
     register_env("melee", _env_creator)
     trainer = get_trainer_from_params(params)
     print("Trainer built")
