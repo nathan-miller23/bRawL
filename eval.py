@@ -8,6 +8,7 @@ import ray
 import melee, time, os, argparse
 from melee import Character
 from ray.rllib.agents.dqn import dqn
+from ppo_train import load_trainer
 
 str_to_char = {
     "fox" : Character.FOX,
@@ -100,10 +101,22 @@ def jim_load(path):
     trainer.restore(path)
     return trainer
 
-def get_policy(path, policy_type):
+def get_policy_jim(path, policy_type):
     policy = None
     if policy_type == 'rllib':
         trainer = jim_load(path)
+        policy = PolicyFromRllib(trainer)
+    elif policy_type == 'torch':
+        # TODO
+        pass
+    else:
+        raise NotImplementedError("This type of policy is not supported")
+    return policy
+
+def get_policy_other(path, policy_type):
+    policy = None
+    if policy_type == 'rllib':
+        trainer = load_trainer(path)
         policy = PolicyFromRllib(trainer)
     elif policy_type == 'torch':
         # TODO
@@ -149,8 +162,8 @@ if __name__ == '__main__':
         "chars" : (str_to_char[args.p1_character], str_to_char[args.p2_character])
     }
 
-    policy_1 = get_policy(args.p1_path, args.p1_type)
-    policy_2 = get_policy(args.p2_path, args.p2_type)
+    policy_1 = get_policy_jim(args.p1_path, args.p1_type)
+    policy_2 = get_policy_other(args.p2_path, args.p2_type)
     env = SSBMEnv(**env_params)
 
     evaluate(env, policy_1, policy_2)
