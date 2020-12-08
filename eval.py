@@ -80,17 +80,7 @@ def jim_load(path):
         },
         "gamma": 0.995,
         "framework": "torch",
-        "env_config": {
-            'dolphin_exe_path': '/Users/jimwang/Desktop/launchpad/bRawL/mocker/dolphin-emu.app/Contents/MacOS',
-            'ssbm_iso_path': '/Users/jimwang/Desktop/launchpad/SSMB.iso',
-            "char1": melee.Character.KIRBY,
-            "char2": melee.Character.MARTH,
-            "cpu": True,
-            "cpu_level": 3,
-            'every_nth' : 1,
-            'buffer_size' : 64,
-            "gamma": 0.995
-        },
+        "env_config": env_params,
         "hiddens": [256, 256],
         "output": 'brawl-training/results',
         "lr": 1e-4,
