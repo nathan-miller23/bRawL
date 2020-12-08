@@ -159,11 +159,12 @@ def train(bc_agent, train_dataloader, test_dataloader, num_actions, num_epochs):
     plt.plot(range(len(test_total_losses)), test_total_losses)
     plt.show()
 
-def play(bc_agent, cpu_level, buffer_size, frame_skip):
+def play(bc_agent, cpu_level, buffer_size, frame_skip, **kwargs):
     with torch.no_grad():
         env = SSBMEnv('../mocker/dolphin-emu.app/Contents/MacOS',
                     ssbm_iso_path='../mocker/m.iso',
-                    cpu=True, cpu_level=cpu_level, every_nth=frame_skip, buffer_size=buffer_size)
+                    cpu=True, cpu_level=cpu_level, every_nth=frame_skip,
+                    buffer_size=buffer_size, **kwargs)
         obs = env.reset()
         done = False
         while not done:
