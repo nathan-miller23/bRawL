@@ -100,7 +100,7 @@ class LinearBufferAgent(BCAgent):
     def forward(self, x):
         # numpy to torch
         if not hasattr(x, 'unsqueeze'):
-            x = torch.from_numpy(x)
+            x = torch.from_numpy(x).to(torch.float)
         # Add batch dimension to gym input
         if len(x.shape) < 3:
             x = x.unsqueeze(0)
