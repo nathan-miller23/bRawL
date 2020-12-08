@@ -35,7 +35,7 @@ class PolicyFromRllib():
         self.policy = trainer.get_policy('default_policy')
 
     def action(self, observation):
-        logits = self.policy.compute_actions(np.expand_dims(obs['ai_1'], 0), None)[2]['action_dist_inputs']
+        logits = self.policy.compute_actions(np.expand_dims(observation, 0), None)[2]['action_dist_inputs']
         probs = np.squeeze(softmax(logits))
         action = np.random.choice(len(probs), p=probs)
         return action
