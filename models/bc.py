@@ -25,7 +25,7 @@ def states_from_file(file):
     dim_states = states[0].shape
     num_actions = max(actions) + 1
     return states, actions, dim_states, num_actions
-    
+
 
 def states_from_folder(folder):
     """Returns states, actions, dim_states, num_actions"""
@@ -49,24 +49,24 @@ def datasets(states, actions, batch_size):
     tensor_test_actions = torch.Tensor(test_actions)
 
     train_dataset = data.TensorDataset(tensor_train_states, tensor_train_actions)
-    train_dataloader = data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True) 
+    train_dataloader = data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     test_dataset = data.TensorDataset(tensor_test_states, tensor_test_actions)
-    test_dataloader = data.DataLoader(test_dataset, batch_size=batch_size) 
+    test_dataloader = data.DataLoader(test_dataset, batch_size=batch_size)
     return train_dataloader, test_dataloader
 
 class BCAgent(nn.Module):
     def __init__(self, agent):
         super().__init__()
         self.agent = agent
-    
+
     def forward(self, x):
         return self.agent(x)
-    
+
     def save_state(self, path):
         torch.save(self.agent.state_dict(), path)
-    
+
     def load_state(self, path):
-        self.agent.load_state_dict(torch.load(path))
+        self.agent.load_state_dict(torch.load(path, map_location=torch.device('cpu')))
 
 class LinearAgent(BCAgent):
     def __init__(self, num_states, num_actions):
@@ -96,7 +96,7 @@ class LinearBufferAgent(BCAgent):
             nn.Linear(hidden_size, num_actions)
         ).to(device)
         super().__init__(agent)
-    
+
     def forward(self, x):
         # numpy to torch
         if not hasattr(x, 'unsqueeze'):
@@ -123,14 +123,14 @@ class ConvBufferAgent(BCAgent):
             nn.Linear(hidden_size, num_actions)
         ).to(device)
         super().__init__(agent)
-    
+
     def forward(self, x):
         # Add batch dimension to gym input
         if len(x.shape) < 3:
             x = x.unsqueeze(0)
         # Unroll buffer into flat array w/o disrupting batching
         return self.agent(torch.flatten(x, start_dim=1))
-    
+
 # class ConvAgent(BCAgent):
 #     def __init__(self, buffer_len, num_states, num_actions):
 #         size_hidden_layers = 1024
@@ -145,13 +145,13 @@ class ConvBufferAgent(BCAgent):
 #             policy_modules.append(torch.nn.Conv1d(num_filters, num_filters, kernel_size=3, padding=1))
 #             policy_modules.append(torch.nn.LeakyReLU())
 #         policy_modules.append(nn.Flatten())
-        
+
 #         #modules.append(nn.InstanceNorm1d(39))
 #         in_size = num_filters * obs_space.shape[1] if num_convs > 0 else obs_space.shape[0] * obs_space.shape[1]
-        
+
 #         policy_modules.append(nn.Linear(in_size, size_hidden_layers))
 #         policy_modules.append(torch.nn.LeakyReLU())
-        
+
 #         for i in range(num_hidden_layers - 1):
 #             policy_modules.append(torch.nn.Linear(size_hidden_layers, size_hidden_layers))
 #             policy_modules.append(torch.nn.LeakyReLU())
@@ -177,7 +177,7 @@ class RLLibAgent(BCAgent):
               }
             }, name=0)
         super().__init__(agent)
-    
+
     def forward(self, x):
         return self.agent({"obs": x})[0]
 
@@ -192,23 +192,23 @@ def train(bc_agent, train_dataloader, test_dataloader, num_actions, num_epochs):
         for s, a in train_dataloader:
             s = s.float().to(device)
             a = a.long().to(device)
-        
+
             loss = loss_func(bc_agent(s), a)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            
+
             train_steps += 1
             train_total_loss += loss.detach().cpu().numpy()
         train_total_losses.append(train_total_loss / train_steps)
-        
+
         test_total_loss = 0
         test_steps = 0
         for s, a in test_dataloader:
             s = s.float().to(device)
             a = a.long().to(device)
             loss = loss_func(bc_agent(s), a)
-            
+
             test_steps += 1
             test_total_loss += loss.detach().cpu().numpy()
         test_total_losses.append(test_total_loss / test_steps)
