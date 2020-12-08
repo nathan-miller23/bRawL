@@ -7,6 +7,7 @@ import numpy as np
 import ray
 import melee, time, os, argparse
 from melee import Character
+from models import bc
 from ray.rllib.agents.dqn import dqn
 from ppo_train import load_trainer
 
@@ -42,12 +43,13 @@ class PolicyFromRllib():
         return action
 
 class PolicyFromTorch():
-
-    def __init__(self, *args):
-        raise NotImplementedError("praveen pls help")
+    
+    def __init__(self, path):
+        self.agent = bc.LinearBufferAgent(buffer_len=32, num_states=87, num_actions=69, hidden_size=256)
+        self.agent.load_state(path)
 
     def action(self, observation):
-        raise NotImplementedError("Praveen pls help")
+        return self.agent(observation)
 
 def evaluate(env, policy_1, policy_2):
     done = False
@@ -107,8 +109,7 @@ def get_policy_jim(path, policy_type):
         trainer = jim_load(path)
         policy = PolicyFromRllib(trainer)
     elif policy_type == 'torch':
-        # TODO
-        pass
+        policy = PolicyFromTorch(path)
     else:
         raise NotImplementedError("This type of policy is not supported")
     return policy
