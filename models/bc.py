@@ -6,7 +6,7 @@ from torch.utils import data
 from matplotlib import pyplot as plt
 from sklearn.model_selection import train_test_split
 from pathlib import Path
-from ppo_model import RllibPPOModel
+# from ppo_model import RllibPPOModel
 from gym import spaces
 import melee
 from melee import SSBMEnv
@@ -81,18 +81,43 @@ class LinearAgent(BCAgent):
         ).to(device)
         super().__init__(agent)
 
+
 class LinearBufferAgent(BCAgent):
     """For use with 2D buffer"""
-    def __init__(self, buffer_len, num_states, num_actions):
+    def __init__(self, buffer_len, num_states, num_actions, hidden_size):
         self.buffer_len = buffer_len
         agent = nn.Sequential(
-            nn.Linear(num_states * buffer_len, 256),
+            nn.Linear(num_states * buffer_len, hidden_size),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(256, 256),
+            nn.Linear(hidden_size, hidden_size),
             nn.ReLU(),
             nn.Dropout(0.5),
-            nn.Linear(256, num_actions)
+            nn.Linear(hidden_size, num_actions)
+        ).to(device)
+        super().__init__(agent)
+    
+    def forward(self, x):
+        # Add batch dimension to gym input
+        if len(x.shape) < 3:
+            x = x.unsqueeze(0)
+        # Unroll buffer into flat array w/o disrupting batching
+        return self.agent(torch.flatten(x, start_dim=1))
+
+class ConvBufferAgent(BCAgent):
+    """For use with 2D buffer"""
+    def __init__(self, buffer_len, num_states, num_actions, hidden_size):
+        self.buffer_len = buffer_len
+        agent = nn.Sequential(
+            nn.Conv1d(1, 8, 3),
+            nn.Conv1d(8, 1, 3),
+            nn.Linear(num_states * buffer_len, hidden_size),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(hidden_size, hidden_size),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(hidden_size, num_actions)
         ).to(device)
         super().__init__(agent)
     
@@ -103,35 +128,35 @@ class LinearBufferAgent(BCAgent):
         # Unroll buffer into flat array w/o disrupting batching
         return self.agent(torch.flatten(x, start_dim=1))
     
-class ConvAgent(BCAgent):
-    def __init__(self, buffer_len, num_states, num_actions):
-        size_hidden_layers = 1024
-        num_convs = 2
-        num_filters = 8
-        obs_space_shape = num_states
-        policy_modules = []
-        if num_convs > 0:
-            policy_modules.append(nn.Conv1d(obs_space_shape, num_filters, kernel_size=3, padding=1))
-            policy_modules.append(torch.nn.LeakyReLU())
-        for _ in range(num_convs-1):
-            policy_modules.append(torch.nn.Conv1d(num_filters, num_filters, kernel_size=3, padding=1))
-            policy_modules.append(torch.nn.LeakyReLU())
-        policy_modules.append(nn.Flatten())
+# class ConvAgent(BCAgent):
+#     def __init__(self, buffer_len, num_states, num_actions):
+#         size_hidden_layers = 1024
+#         num_convs = 2
+#         num_filters = 8
+#         obs_space_shape = num_states
+#         policy_modules = []
+#         if num_convs > 0:
+#             policy_modules.append(nn.Conv1d(obs_space_shape, num_filters, kernel_size=3, padding=1))
+#             policy_modules.append(torch.nn.LeakyReLU())
+#         for _ in range(num_convs-1):
+#             policy_modules.append(torch.nn.Conv1d(num_filters, num_filters, kernel_size=3, padding=1))
+#             policy_modules.append(torch.nn.LeakyReLU())
+#         policy_modules.append(nn.Flatten())
         
-        #modules.append(nn.InstanceNorm1d(39))
-        in_size = num_filters * obs_space.shape[1] if num_convs > 0 else obs_space.shape[0] * obs_space.shape[1]
+#         #modules.append(nn.InstanceNorm1d(39))
+#         in_size = num_filters * obs_space.shape[1] if num_convs > 0 else obs_space.shape[0] * obs_space.shape[1]
         
-        policy_modules.append(nn.Linear(in_size, size_hidden_layers))
-        policy_modules.append(torch.nn.LeakyReLU())
+#         policy_modules.append(nn.Linear(in_size, size_hidden_layers))
+#         policy_modules.append(torch.nn.LeakyReLU())
         
-        for i in range(num_hidden_layers - 1):
-            policy_modules.append(torch.nn.Linear(size_hidden_layers, size_hidden_layers))
-            policy_modules.append(torch.nn.LeakyReLU())
+#         for i in range(num_hidden_layers - 1):
+#             policy_modules.append(torch.nn.Linear(size_hidden_layers, size_hidden_layers))
+#             policy_modules.append(torch.nn.LeakyReLU())
 
-        self._num_outputs = num_outputs
-        self.shared = nn.Sequential(*policy_modules)
-        self.policy_out = nn.Linear(size_hidden_layers, self._num_outputs)
-        self.value_out = nn.Linear(size_hidden_layers, 1)
+#         self._num_outputs = num_outputs
+#         self.shared = nn.Sequential(*policy_modules)
+#         self.policy_out = nn.Linear(size_hidden_layers, self._num_outputs)
+#         self.value_out = nn.Linear(size_hidden_layers, 1)
 
 class RLLibAgent(BCAgent):
     def __init__(self, num_states, num_actions):
