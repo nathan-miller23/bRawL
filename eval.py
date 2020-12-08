@@ -47,7 +47,10 @@ class PolicyFromRllib():
 class PolicyFromTorch():
 
     def __init__(self, path):
-        self.agent = bc.LinearBufferAgent(buffer_len=32, num_states=87, num_actions=69, hidden_size=256)
+        if path == '/Users/jimwang/Desktop/yi_kirby_fox_yolo.jpg':
+            self.agent = bc.LinearBufferAgent(buffer_len=4, num_states=87, num_actions=59, hidden_size=256)
+        else:
+            self.agent = bc.LinearBufferAgent(buffer_len=32, num_states=87, num_actions=69, hidden_size=256)
         self.agent.load_state(path)
 
     def action(self, observation):
@@ -183,8 +186,8 @@ if __name__ == '__main__':
         "same_char": args.p1_character == args.p2_character
     }
 
-    policy_1 = get_policy(args.p1_path, args.p1_type, env_params)
-    policy_2 = get_policy(args.p2_path, args.p2_type, env_params, jim=False)
+    policy_1 = get_policy(args.p1_path, args.p1_type, env_params, jim=False)
+    policy_2 = get_policy(args.p2_path, args.p2_type, env_params, jim=True)
     env = SSBMEnv(**env_params)
 
     evaluate(env, policy_1, policy_2)
