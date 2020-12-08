@@ -7,11 +7,8 @@ import numpy as np
 import ray
 import melee, time, os, argparse
 from melee import Character
-<<<<<<< HEAD
 from models import bc
-=======
 from ray.rllib.agents.dqn import dqn
->>>>>>> d1ff866d333363a941a7f2e816b88111281c66d5
 
 str_to_char = {
     "fox" : Character.FOX,
