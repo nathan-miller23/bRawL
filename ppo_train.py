@@ -254,11 +254,15 @@ def save_trainer(trainer, params, path=None):
         dill.dump(config, f)
     return save_path
 
-def load_trainer(save_path):
+def load_trainer(save_path, env_config):
     """
     Returns a ray compatible trainer object that was previously saved at `save_path` by a call to `save_trainer`
     Note that `save_path` is the full path to the checkpoint FILE, not the checkpoint directory
     """
+    ray.shutdown()
+    ray.init()
+    ModelCatalog.register_custom_model("my_model", RllibPPOModel)
+    register_env("melee", _env_creator)
     # Read in params used to create trainer
     config_path = os.path.join(os.path.dirname(save_path), "config.pkl")
     with open(config_path, "rb") as f:
@@ -266,7 +270,8 @@ def load_trainer(save_path):
         config = dill.load(f)
     
     # Override this param to lower overhead in trainer creation
-    config['training_params']['num_workers'] = 0
+    config['rllib_params']['num_workers'] = 0
+    config['rllib_params']['env_config'] = env_config
 
     # Get un-trained trainer object with proper config
     trainer = get_trainer_from_params(config)
