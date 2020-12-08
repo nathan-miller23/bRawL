@@ -26,7 +26,7 @@ from ray.tune.registry import register_env
 ray.init()
 
 def env_creator(env_config):
-    return SSBMEnv(env_config['dolphin_exe_path'], env_config['ssbm_iso_path'], cpu=True)
+    return SSBMEnv(env_config['dolphin_exe_path'], env_config['ssbm_iso_path'], cpu=True, every_nth = env_config['every_nth'], buffer_size = env_config['buffer_size'], aggro_coeff = env_config['aggro_coeff'])
 
 class FCNet(TorchModelV2, nn.Module):
     """Generic fully connected network."""
@@ -62,22 +62,28 @@ class FCNet(TorchModelV2, nn.Module):
 register_env("SSBM", env_creator)
 trainer = dqn.DQNTrainer(env="SSBM", config = {
     "model": {
-        "custom_model": FCNet,
+        "fcnet_hiddens": [256, 256]
     },
-    "gamma": 0.999,
+    "gamma": 0.995,
     "framework": "torch",
-    "env_config": {'dolphin_exe_path': '/Users/jimwang/Desktop/launchpad/bRawL/mocker/dolphin-emu.app/Contents/MacOS','ssbm_iso_path': '/Users/jimwang/Desktop/launchpad/SSMB.iso'},
+    "env_config": {
+        'dolphin_exe_path': '/Users/jimwang/Desktop/launchpad/bRawL/mocker/dolphin-emu.app/Contents/MacOS',
+        'ssbm_iso_path': '/Users/jimwang/Desktop/launchpad/SSMB.iso',
+        'every_nth' : 1,
+        'buffer_size' : 64,
+        'aggro_coeff' : 1
+    },
     "exploration_config": {"epsilon_timesteps": 400000},
     "hiddens": [256, 256],
     "output": 'brawl-training/results',
-    "lr": 1e-4
+    "lr": 1e-5
 })
 
 policy = trainer.get_policy()
 model = policy.q_model
 print(model)
 
-#trainer.restore('/Users/jimwang/ray_results/DQN_SSBM_2020-12-05_23-08-15ognrsamx/checkpoint_351/checkpoint-351')
+#trainer.restore('/Users/jimwang/ray_results/DQN_SSBM_2020-12-07_00-52-160aen3cr9/checkpoint_21/checkpoint-21')
 for i in range(5000):
     info = trainer.train()
     print("episode reward mean:", info['episode_reward_mean'], "num steps trained:", info['info']["num_steps_trained"])
