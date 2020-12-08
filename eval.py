@@ -43,7 +43,7 @@ class PolicyFromRllib():
         return action
 
 class PolicyFromTorch():
-    
+
     def __init__(self, path):
         self.agent = bc.LinearBufferAgent(buffer_len=32, num_states=87, num_actions=69, hidden_size=256)
         self.agent.load_state(path)
@@ -117,7 +117,7 @@ def get_policy_jim(path, policy_type):
 def get_policy_other(path, policy_type):
     policy = None
     if policy_type == 'rllib':
-        trainer = load_trainer(path)
+        trainer = load_trainer(path, env_params)
         policy = PolicyFromRllib(trainer)
     elif policy_type == 'torch':
         # TODO
