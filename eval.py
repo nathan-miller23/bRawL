@@ -7,7 +7,11 @@ import numpy as np
 import ray
 import melee, time, os, argparse
 from melee import Character
+<<<<<<< HEAD
 from models import bc
+=======
+from ray.rllib.agents.dqn import dqn
+>>>>>>> d1ff866d333363a941a7f2e816b88111281c66d5
 
 str_to_char = {
     "fox" : Character.FOX,
@@ -35,7 +39,7 @@ class PolicyFromRllib():
         self.policy = trainer.get_policy('default_policy')
 
     def action(self, observation):
-        logits = self.policy.compute_actions(np.expand_dims(obs['ai_1'], 0), None)[2]['action_dist_inputs']
+        logits = self.policy.compute_actions(np.expand_dims(observation, 0), None)[2]['action_dist_inputs']
         probs = np.squeeze(softmax(logits))
         action = np.random.choice(len(probs), p=probs)
         return action
@@ -61,10 +65,50 @@ def evaluate(env, policy_1, policy_2):
         joint_obs, _, done, _ = env.step(joint_action)
         done = done['__all__']
 
+def jim_load(path):
+    ray.shutdown()
+    ray.init()
+    model_params = {
+        "NUM_HIDDEN_LAYERS" : 0,
+        "SIZE_HIDDEN_LAYERS" : 256,
+        "NUM_FILTERS" : 64,
+        "NUM_CONV_LAYERS" : 3
+    }
+    def env_creator(env_config):
+        return SSBMEnv(**env_config)
+    register_env("SSBM", env_creator)
+
+    trainer = dqn.DQNTrainer(env="SSBM", config = {
+        "model": {
+            "custom_model_config": model_params,
+            "custom_model": RllibDQNModel
+        },
+        "gamma": 0.995,
+        "framework": "torch",
+        "env_config": env_params,
+        "hiddens": [256, 256],
+        "output": 'brawl-training/results',
+        "lr": 1e-4,
+        "v_min": -300.0,
+        "v_max": 300.0,
+        "noisy" : True,
+        "sigma0" : 0.2,
+        "n_step" : 5,
+        "exploration_config": {
+            "type": "EpsilonGreedy",
+            "initial_epsilon": 1.0,
+            "final_epsilon": 0.01,
+            "epsilon_timesteps": 200000
+        }
+    })
+
+    trainer.restore(path)
+    return trainer
+
 def get_policy(path, policy_type):
     policy = None
     if policy_type == 'rllib':
-        trainer = load_trainer(path)
+        trainer = jim_load(path)
         policy = PolicyFromRllib(trainer)
     elif policy_type == 'torch':
         policy = PolicyFromTorch(path)
@@ -114,5 +158,3 @@ if __name__ == '__main__':
     env = SSBMEnv(**env_params)
 
     evaluate(env, policy_1, policy_2)
-
-
