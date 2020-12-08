@@ -7,6 +7,7 @@ import numpy as np
 import ray
 import melee, time, os, argparse
 from melee import Character
+from ray.rllib.agents.dqn import dqn
 
 str_to_char = {
     "fox" : Character.FOX,
@@ -40,7 +41,7 @@ class PolicyFromRllib():
         return action
 
 class PolicyFromTorch():
-    
+
     def __init__(self, *args):
         raise NotImplementedError("praveen pls help")
 
@@ -59,10 +60,60 @@ def evaluate(env, policy_1, policy_2):
         joint_obs, _, done, _ = env.step(joint_action)
         done = done['__all__']
 
+def jim_load(path):
+    ray.shutdown()
+    ray.init()
+    model_params = {
+        "NUM_HIDDEN_LAYERS" : 0,
+        "SIZE_HIDDEN_LAYERS" : 256,
+        "NUM_FILTERS" : 64,
+        "NUM_CONV_LAYERS" : 3
+    }
+    def env_creator(env_config):
+        return SSBMEnv(**env_config)
+    register_env("SSBM", env_creator)
+
+    trainer = dqn.DQNTrainer(env="SSBM", config = {
+        "model": {
+            "custom_model_config": model_params,
+            "custom_model": RllibDQNModel
+        },
+        "gamma": 0.995,
+        "framework": "torch",
+        "env_config": {
+            'dolphin_exe_path': '/Users/jimwang/Desktop/launchpad/bRawL/mocker/dolphin-emu.app/Contents/MacOS',
+            'ssbm_iso_path': '/Users/jimwang/Desktop/launchpad/SSMB.iso',
+            "char1": melee.Character.KIRBY,
+            "char2": melee.Character.MARTH,
+            "cpu": True,
+            "cpu_level": 3,
+            'every_nth' : 1,
+            'buffer_size' : 64,
+            "gamma": 0.995
+        },
+        "hiddens": [256, 256],
+        "output": 'brawl-training/results',
+        "lr": 1e-4,
+        "v_min": -300.0,
+        "v_max": 300.0,
+        "noisy" : True,
+        "sigma0" : 0.2,
+        "n_step" : 5,
+        "exploration_config": {
+            "type": "EpsilonGreedy",
+            "initial_epsilon": 1.0,
+            "final_epsilon": 0.01,
+            "epsilon_timesteps": 200000
+        }
+    })
+
+    trainer.restore(path)
+    return trainer
+
 def get_policy(path, policy_type):
     policy = None
     if policy_type == 'rllib':
-        trainer = load_trainer(path)
+        trainer = jim_load(path)
         policy = PolicyFromRllib(trainer)
     elif policy_type == 'torch':
         # TODO
@@ -113,5 +164,3 @@ if __name__ == '__main__':
     env = SSBMEnv(**env_params)
 
     evaluate(env, policy_1, policy_2)
-
-
