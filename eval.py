@@ -10,6 +10,8 @@ from melee import Character
 from models import bc
 from ray.rllib.agents.dqn import dqn
 from ppo_train import load_trainer
+import dill
+from ray.rllib.agents.ppo.ppo import PPOTrainer
 
 str_to_char = {
     "fox" : Character.FOX,
@@ -63,50 +65,66 @@ def evaluate(env, policy_1, policy_2):
         joint_obs, _, done, _ = env.step(joint_action)
         done = done['__all__']
 
-def jim_load(path):
+def jim_load(path, env_params, jim=True):
     ray.shutdown()
     ray.init()
-    model_params = {
-        "NUM_HIDDEN_LAYERS" : 0,
-        "SIZE_HIDDEN_LAYERS" : 256,
-        "NUM_FILTERS" : 64,
-        "NUM_CONV_LAYERS" : 3
-    }
+    if not jim:
+        # Read in params used to create trainer
+        ModelCatalog.register_custom_model("my_model", RllibPPOModel)
+        config_path = os.path.join(os.path.dirname(path), "config.pkl")
+        with open(config_path, "rb") as f:
+            # We use dill (instead of pickle) here because we must deserialize functions
+            config = dill.load(f)
+        config['rllib_params']['env_config'] = env_params
+    else:
+        model_params = {
+            "NUM_HIDDEN_LAYERS" : 0,
+            "SIZE_HIDDEN_LAYERS" : 256,
+            "NUM_FILTERS" : 64,
+            "NUM_CONV_LAYERS" : 3
+        }
+        config = {
+            "model": {
+                "custom_model_config": model_params,
+                "custom_model": RllibDQNModel
+            },
+            "gamma": 0.995,
+            "framework": "torch",
+            "env_config": env_params,
+            "hiddens": [256, 256],
+            "output": 'brawl-training/results',
+            "lr": 1e-4,
+            "v_min": -300.0,
+            "v_max": 300.0,
+            "noisy" : True,
+            "sigma0" : 0.2,
+            "n_step" : 5,
+            "exploration_config": {
+                "type": "EpsilonGreedy",
+                "initial_epsilon": 1.0,
+                "final_epsilon": 0.01,
+                "epsilon_timesteps": 200000
+            }
+        }
+
+
     def env_creator(env_config):
         return SSBMEnv(**env_config)
     register_env("SSBM", env_creator)
+    register_env("melee", env_creator)
 
-    trainer = dqn.DQNTrainer(env="SSBM", config = {
-        "model": {
-            "custom_model_config": model_params,
-            "custom_model": RllibDQNModel
-        },
-        "gamma": 0.995,
-        "framework": "torch",
-        "env_config": env_params,
-        "hiddens": [256, 256],
-        "output": 'brawl-training/results',
-        "lr": 1e-4,
-        "v_min": -300.0,
-        "v_max": 300.0,
-        "noisy" : True,
-        "sigma0" : 0.2,
-        "n_step" : 5,
-        "exploration_config": {
-            "type": "EpsilonGreedy",
-            "initial_epsilon": 1.0,
-            "final_epsilon": 0.01,
-            "epsilon_timesteps": 200000
-        }
-    })
+    if jim:
+        trainer = dqn.DQNTrainer(env="SSBM", config=config)
+    else:
+        trainer = PPOTrainer(env="melee", config=config['rllib_params'])
 
     trainer.restore(path)
     return trainer
 
-def get_policy_jim(path, policy_type):
+def get_policy(path, policy_type, env_params, jim=True):
     policy = None
     if policy_type == 'rllib':
-        trainer = jim_load(path)
+        trainer = jim_load(path, env_params, jim)
         policy = PolicyFromRllib(trainer)
     elif policy_type == 'torch':
         policy = PolicyFromTorch(path)
@@ -160,11 +178,12 @@ if __name__ == '__main__':
         "ssbm_iso_path" : args.ssbm_iso_path,
         "buffer_size" : (args.p1_buffer_size, args.p2_buffer_size),
         "every_nth" : (args.p1_frame_skip, args.p2_frame_skip),
-        "chars" : (str_to_char[args.p1_character], str_to_char[args.p2_character])
+        "chars" : (str_to_char[args.p1_character], str_to_char[args.p2_character]),
+        "same_char": args.p1_character == args.p2_character
     }
 
-    policy_1 = get_policy_jim(args.p1_path, args.p1_type)
-    policy_2 = get_policy_other(args.p2_path, args.p2_type)
+    policy_1 = get_policy(args.p1_path, args.p1_type, env_params)
+    policy_2 = get_policy(args.p2_path, args.p2_type, env_params, jim=False)
     env = SSBMEnv(**env_params)
 
     evaluate(env, policy_1, policy_2)
