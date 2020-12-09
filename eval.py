@@ -1,4 +1,5 @@
 from melee import SSBMEnv
+from melee import Env
 from ray.rllib.models import ModelCatalog
 from dqn_train import load_trainer, _env_creator
 from ray.tune.registry import register_env
@@ -12,6 +13,7 @@ from ray.rllib.agents.dqn import dqn
 from ppo_train import load_trainer
 import dill
 from ray.rllib.agents.ppo.ppo import PPOTrainer
+import pynput
 
 str_to_char = {
     "fox" : Character.FOX,
@@ -32,6 +34,18 @@ class Policy():
 
     def action(self, observation):
         raise NotImplementedError("AHHH")
+
+class HumanPolicy():
+    def __init__(self, *args, **kwargs):
+        pynput.keyboard.Listener(on_press=Env.on_press, on_release=Env.on_release).start()
+    
+    def action(self, observation):
+        if Env.keys_released:
+            return Env.process_released()
+        elif Env.keys_pressed:
+            return Env.process_pressed()
+        else:
+            return 0
 
 class PolicyFromRllib():
     def __init__(self, trainer):
@@ -132,6 +146,8 @@ def get_policy(path, policy_type, env_params, jim=True):
         policy = PolicyFromRllib(trainer)
     elif policy_type == 'torch':
         policy = PolicyFromTorch(path)
+    elif policy_type == 'human':
+        policy = HumanPolicy()
     else:
         raise NotImplementedError("This type of policy is not supported")
     return policy
@@ -183,7 +199,7 @@ if __name__ == '__main__':
         "buffer_size" : (args.p1_buffer_size, args.p2_buffer_size),
         "every_nth" : (args.p1_frame_skip, args.p2_frame_skip),
         "chars" : (str_to_char[args.p1_character], str_to_char[args.p2_character]),
-        "same_char": args.p1_character == args.p2_character
+        "same_char": args.p1_character == args.p2_character,
     }
 
     policy_1 = get_policy(args.p1_path, args.p1_type, env_params, jim=False)
